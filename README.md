@@ -36,9 +36,15 @@ $KPM launch dropbear-ssh
 this repo's `manifest.json`/`.kpkg` straight from GitHub — shorter to type
 than the raw GitHub URL, and (confirmed on real hardware) it also routes
 around cases where a Kindle's network can reach Cloudflare but not GitHub's
-raw-content CDN directly. `https://bit.ly/dropbear-ssh` and
-`https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`
-both still work too — all three point at the same content.
+raw-content CDN directly. The full URL,
+`https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`,
+still works too if you'd rather see exactly where you're pointing before
+typing a domain you don't recognize.
+
+Working on getting this added to the
+[official KPM repo](https://github.com/KindleModding/repo) too, so
+eventually `kpm install dropbear-ssh` will work with no `add-repo` step at
+all — not there yet.
 
 `kpm launch` prints the exact command to connect with, using the Kindle's
 real WiFi IP:
