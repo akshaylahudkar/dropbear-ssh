@@ -6,9 +6,7 @@ to build, no USB cable required once it's installed.
 
 ## Install
 
-Requires KPM on the device (modern jailbreaks ship with it pre-installed).
-
-**From `kterm` or any real terminal:**
+Requires KPM (modern jailbreaks ship with it pre-installed). From `kterm`:
 
 ```
 KPM=/var/local/kmc/bin/kpm
@@ -18,30 +16,17 @@ $KPM -y install dropbear-ssh
 $KPM launch dropbear-ssh
 ```
 
-**From the search bar**, type each line separately:
+(From the search bar instead, type each line separately as `;kpm ...` — see
+[Install details](#install-details) for why the commands differ slightly.)
 
-```
-;kpm add-repo https://dropbear.nealing.net/manifest.json
-;kpm update
-;kpm install dropbear-ssh
-;kpm launch dropbear-ssh
-```
-
-(See [Install details](#install-details) below for why `kterm` needs the
-full path, what `dropbear.nealing.net` is, and KPM setup if you don't have
-it yet.)
-
-`kpm launch` prints the exact command to connect with, using the Kindle's
-real WiFi IP:
+`kpm launch` prints your connect command with the Kindle's real IP:
 
 ```
 ssh -p 2022 root@<kindle-ip>
 ```
 
-A random password is generated on install and printed right there in the
-log — that's it, you're in. (Installing from the search bar? That log can
-flash and disappear before you can read it — see [Password](#password)
-below for how to still get it.)
+Password is random, printed in the log — see [Password](#password) if you
+missed it.
 
 ## Password
 
