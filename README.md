@@ -16,7 +16,7 @@ fails with `not found`; use the full path:
 
 ```
 KPM=/var/local/kmc/bin/kpm
-$KPM add-repo https://bit.ly/dropbear-ssh
+$KPM add-repo https://dropbear.nealing.net/manifest.json
 $KPM -y update
 $KPM -y install dropbear-ssh
 $KPM launch dropbear-ssh
@@ -26,17 +26,19 @@ $KPM launch dropbear-ssh
 `;kpm` wiring resolves the path for you, so no full path needed there:
 
 ```
-;kpm add-repo https://bit.ly/dropbear-ssh
+;kpm add-repo https://dropbear.nealing.net/manifest.json
 ;kpm update
 ;kpm install dropbear-ssh
 ;kpm launch dropbear-ssh
 ```
 
-`https://bit.ly/dropbear-ssh` is a shortlink to this repo's manifest —
-easier to type on-device than the full URL. If you'd rather see exactly
-where you're pointing before typing it, that's
+`dropbear.nealing.net` is a Cloudflare Worker that transparently proxies
+this repo's `manifest.json`/`.kpkg` straight from GitHub — shorter to type
+than the raw GitHub URL, and (confirmed on real hardware) it also routes
+around cases where a Kindle's network can reach Cloudflare but not GitHub's
+raw-content CDN directly. `https://bit.ly/dropbear-ssh` and
 `https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`
-— either works with `add-repo`.
+both still work too — all three point at the same content.
 
 `kpm launch` prints the exact command to connect with, using the Kindle's
 real WiFi IP:
