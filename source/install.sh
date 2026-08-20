@@ -39,16 +39,33 @@ chmod +x "${BINDIR}/dropbearmulti" "${BINDIR}/sftp-server"
 # guessable, so generate one instead. 6 bytes of /dev/urandom as hex (12
 # chars) is plenty for a LAN-only on-demand server; falls back to a
 # timestamp/pid mix if urandom or od are somehow unavailable.
+#
+# Before installing, anyone can drop a plain text file named
+# dropbear_password.txt at the root of the Kindle drive (via USB — no
+# folder-creation, no exact-filename-without-an-extension footgun that a
+# path under etc/ would require) to pick their own password instead of a
+# random one. head -n1 + tr strips Windows line endings in case it was
+# saved from Notepad.
+STAGED_PASSFILE="/mnt/us/dropbear_password.txt"
 if [ ! -f "${PASSFILE}" ]; then
-    RANDPASS=$(dd if=/dev/urandom bs=1 count=6 2>/dev/null | od -An -tx1 2>/dev/null | tr -d ' \n')
-    if [ -z "${RANDPASS}" ]; then
-        RANDPASS="kp$$$(date +%s 2>/dev/null)"
+    if [ -f "${STAGED_PASSFILE}" ]; then
+        head -n1 "${STAGED_PASSFILE}" | tr -d '\r\n' > "${PASSFILE}"
+        rm -f "${STAGED_PASSFILE}"
+        echo "Using password from ${STAGED_PASSFILE} (file removed)."
+    else
+        RANDPASS=$(dd if=/dev/urandom bs=1 count=6 2>/dev/null | od -An -tx1 2>/dev/null | tr -d ' \n')
+        if [ -z "${RANDPASS}" ]; then
+            RANDPASS="kp$$$(date +%s 2>/dev/null)"
+        fi
+        echo "${RANDPASS}" > "${PASSFILE}"
     fi
-    echo "${RANDPASS}" > "${PASSFILE}"
 fi
 
 echo "Installed. Launch with: kpm launch dropbear-ssh"
 echo "Password: $(cat "${PASSFILE}")"
+echo "(If installing from the search bar, this output may flash and vanish"
+echo "before you can read it — the password is always saved in plain text at"
+echo "${PASSFILE}, readable via USB or kterm regardless of how install ran.)"
 echo "To set your own: edit ${PASSFILE} (plain text, one line), then kill any"
 echo "running dropbearmulti dropbear process and 'kpm launch dropbear-ssh'"
 echo "again — a running server has already loaded the old password into"

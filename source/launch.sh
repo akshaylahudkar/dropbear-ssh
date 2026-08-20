@@ -41,5 +41,8 @@ iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT 2>/dev/null || \
 nohup "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" \
     >"${BASEDIR}/dropbear.log" 2>&1 &
 
+KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
+[ -z "${KINDLE_IP}" ] && KINDLE_IP="<kindle-ip — check Settings > Wi-Fi > (i) on the device>"
+
 echo "SSH server starting on port ${PORT} (pid $!)."
-echo "Connect: ssh -p ${PORT} root@<kindle-ip>   (sftp: same port)"
+echo "Connect: ssh -p ${PORT} root@${KINDLE_IP}   (sftp: same port)"
