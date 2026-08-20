@@ -10,11 +10,26 @@ Requires KPM on the device — modern jailbreaks ship with it pre-installed
 (try `;kpm update` from the search bar to check; see the
 [KPM project](https://github.com/KindleModding/KPM) if you don't have it).
 
+**From `kterm` or any real terminal** — KPM's own installer never puts `kpm`
+on your `PATH` (confirmed straight from its `install.sh`), so bare `kpm`
+fails with `not found`; use the full path:
+
 ```
-kpm add-repo https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json
-kpm update
-kpm install dropbear-ssh
-kpm launch dropbear-ssh
+KPM=/var/local/kmc/bin/kpm
+$KPM add-repo https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json
+$KPM -y update
+$KPM -y install dropbear-ssh
+$KPM launch dropbear-ssh
+```
+
+**From the search bar**, type each line separately — the search bar's own
+`;kpm` wiring resolves the path for you, so no full path needed there:
+
+```
+;kpm add-repo https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json
+;kpm update
+;kpm install dropbear-ssh
+;kpm launch dropbear-ssh
 ```
 
 `kpm launch` prints the exact command to connect with, using the Kindle's
