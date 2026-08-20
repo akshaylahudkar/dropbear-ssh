@@ -8,9 +8,24 @@ USB networking, no rebuilding anything from source. It's a repackaging of the
 (themselves built on [Dropbear SSH](https://matt.ucc.asn.au/dropbear/dropbear.html)
 by Matt Johnston, with Kindle-specific patches from that project), wrapped as
 a KPM hook package instead of that project's original OTA/`mrpackages`
-installer, since the OTA installer writes to rootfs (symlinks in `/usr/bin`)
-and sets up USB-tethered networking that most people with a Kindle already on
-WiFi don't need.
+installer.
+
+**Why not just use upstream's own installer?** Two reasons:
+
+1. **It doesn't actually work on a modern jailbreak out of the box.** Upstream's
+   install method is the classic `;...mrpi` search-bar command, which on
+   current jailbreaks is handled by `dispatch.sh` — a script that looks for a
+   separate, no-longer-bundled extension at
+   `/mnt/us/extensions/MRInstaller/bin/mrinstaller.sh`. If that file isn't
+   there (it isn't, on a modern KPM-based jailbreak — confirmed directly on
+   device), the command just flashes **"MRPI is not installed."** and exits,
+   silently doing nothing to the `.bin` sitting in `mrpackages/`. Modern
+   jailbreaks ship KPM as their actual homebrew mechanism instead of the old
+   MobileRead Installer this depends on.
+2. Even setting that aside, the OTA installer writes to rootfs (symlinks in
+   `/usr/bin`, upstart jobs in `/etc/upstart`) and sets up USB-tethered
+   networking that most people with a Kindle already on WiFi don't need —
+   neither of which a KPM hook package is allowed or needs to do.
 
 All credit for the actual SSH server and the Kindle-specific patches
 (`dropbear_be_cool.patch` — the hardcoded paths this package relies on) goes
