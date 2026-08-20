@@ -6,13 +6,9 @@ to build, no USB cable required once it's installed.
 
 ## Install
 
-Requires KPM on the device — modern jailbreaks ship with it pre-installed
-(try `;kpm update` from the search bar to check; see the
-[KPM project](https://github.com/KindleModding/KPM) if you don't have it).
+Requires KPM on the device (modern jailbreaks ship with it pre-installed).
 
-**From `kterm` or any real terminal** — KPM's own installer never puts `kpm`
-on your `PATH` (confirmed straight from its `install.sh`), so bare `kpm`
-fails with `not found`; use the full path:
+**From `kterm` or any real terminal:**
 
 ```
 KPM=/var/local/kmc/bin/kpm
@@ -22,8 +18,7 @@ $KPM -y install dropbear-ssh
 $KPM launch dropbear-ssh
 ```
 
-**From the search bar**, type each line separately — the search bar's own
-`;kpm` wiring resolves the path for you, so no full path needed there:
+**From the search bar**, type each line separately:
 
 ```
 ;kpm add-repo https://dropbear.nealing.net/manifest.json
@@ -32,19 +27,9 @@ $KPM launch dropbear-ssh
 ;kpm launch dropbear-ssh
 ```
 
-`dropbear.nealing.net` is a Cloudflare Worker that transparently proxies
-this repo's `manifest.json`/`.kpkg` straight from GitHub — shorter to type
-than the raw GitHub URL, and (confirmed on real hardware) it also routes
-around cases where a Kindle's network can reach Cloudflare but not GitHub's
-raw-content CDN directly. The full URL,
-`https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`,
-still works too if you'd rather see exactly where you're pointing before
-typing a domain you don't recognize.
-
-Working on getting this added to the
-[official KPM repo](https://github.com/KindleModding/repo) too, so
-eventually `kpm install dropbear-ssh` will work with no `add-repo` step at
-all — not there yet.
+(See [Install details](#install-details) below for why `kterm` needs the
+full path, what `dropbear.nealing.net` is, and KPM setup if you don't have
+it yet.)
 
 `kpm launch` prints the exact command to connect with, using the Kindle's
 real WiFi IP:
@@ -73,6 +58,31 @@ below for how to still get it.)
   again (a running server already has the old one loaded in memory).
 - **Back to random**: delete that file instead of editing it — the next
   launch generates a fresh one automatically.
+
+<details>
+<summary><strong id="install-details">Install details</strong></summary>
+
+- **KPM itself**: modern jailbreaks ship with it pre-installed — try
+  `;kpm update` from the search bar to check. If you're on an older
+  jailbreak without it, see the [KPM project](https://github.com/KindleModding/KPM)
+  for current install instructions (not duplicated here since they're
+  liable to change).
+- **Why `kterm` needs the full path**: KPM's own installer never puts `kpm`
+  on your `PATH` (confirmed straight from its `install.sh`), so bare `kpm`
+  fails with `not found` there. The search bar's own `;kpm` wiring resolves
+  the path for you already, so no full path needed for that one.
+- **What `dropbear.nealing.net` is**: a Cloudflare Worker that transparently
+  proxies this repo's `manifest.json`/`.kpkg` straight from GitHub — shorter
+  to type than the raw GitHub URL, and (confirmed on real hardware) it also
+  routes around cases where a Kindle's network can reach Cloudflare but not
+  GitHub's raw-content CDN directly. The full URL,
+  `https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`,
+  still works too if you'd rather see exactly where you're pointing before
+  typing a domain you don't recognize.
+- **Official KPM repo**: working on getting this added there too, so
+  eventually `kpm install dropbear-ssh` will work with no `add-repo` step
+  at all — not there yet.
+</details>
 
 <details>
 <summary><strong>Why not just use upstream's own installer?</strong></summary>
