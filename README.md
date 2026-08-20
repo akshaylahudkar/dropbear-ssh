@@ -16,7 +16,7 @@ fails with `not found`; use the full path:
 
 ```
 KPM=/var/local/kmc/bin/kpm
-$KPM add-repo https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json
+$KPM add-repo https://bit.ly/dropbear-ssh
 $KPM -y update
 $KPM -y install dropbear-ssh
 $KPM launch dropbear-ssh
@@ -26,11 +26,17 @@ $KPM launch dropbear-ssh
 `;kpm` wiring resolves the path for you, so no full path needed there:
 
 ```
-;kpm add-repo https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json
+;kpm add-repo https://bit.ly/dropbear-ssh
 ;kpm update
 ;kpm install dropbear-ssh
 ;kpm launch dropbear-ssh
 ```
+
+`https://bit.ly/dropbear-ssh` is a shortlink to this repo's manifest —
+easier to type on-device than the full URL. If you'd rather see exactly
+where you're pointing before typing it, that's
+`https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`
+— either works with `add-repo`.
 
 `kpm launch` prints the exact command to connect with, using the Kindle's
 real WiFi IP:
