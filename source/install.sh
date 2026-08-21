@@ -8,6 +8,14 @@ BINDIR="${BASEDIR}/bin"
 DROPBEARDIR="${BASEDIR}/etc/dropbear"
 PASSFILE="${BASEDIR}/etc/ssh_password"
 
+# Resolve paths to bin_khf/bin_11thgenplus relative to this script's own
+# location, not the caller's cwd. KPM always chdirs into the package
+# directory before running install.sh, so a bare "./bin_khf" happened to
+# work there — but it silently breaks (cp fails, script keeps going with
+# no error, binary just never gets installed) when run directly, e.g.
+# `sh /path/to/install.sh` from kterm without cd-ing there first.
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
 mkdir -p "${BINDIR}" "${DROPBEARDIR}"
 
 # Upstream ships two binary builds with overlapping-but-different device
@@ -22,16 +30,16 @@ mkdir -p "${BINDIR}" "${DROPBEARDIR}"
 KVER=$(uname -r)
 case "${KVER}" in
     4.1.*)
-        SRC="./bin_khf"
+        SRC="${SCRIPT_DIR}/bin_khf"
         ;;
     *)
-        SRC="./bin_11thgenplus"
+        SRC="${SCRIPT_DIR}/bin_11thgenplus"
         ;;
 esac
 echo "Kernel ${KVER} -> using ${SRC}"
 
-cp -f "${SRC}/dropbearmulti" "${BINDIR}/dropbearmulti"
-cp -f "${SRC}/sftp-server" "${BINDIR}/sftp-server"
+cp -f "${SRC}/dropbearmulti" "${BINDIR}/dropbearmulti" || { echo "ERROR: failed to copy ${SRC}/dropbearmulti — aborting install."; exit 1; }
+cp -f "${SRC}/sftp-server" "${BINDIR}/sftp-server" || { echo "ERROR: failed to copy ${SRC}/sftp-server — aborting install."; exit 1; }
 chmod +x "${BINDIR}/dropbearmulti" "${BINDIR}/sftp-server"
 
 # Random per-install password for the master-password auth flag (-Y) — a

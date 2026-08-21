@@ -4,6 +4,7 @@
 BASEDIR="/mnt/us/usbnetlite"
 BINDIR="${BASEDIR}/bin"
 PASSFILE="${BASEDIR}/etc/ssh_password"
+PIDFILE="${BASEDIR}/etc/dropbear.pid"
 PORT="2022"
 
 # Self-heal rather than fall back to a fixed/guessable password if the
@@ -18,15 +19,20 @@ if [ -z "${PASSWORD}" ]; then
     echo "No password file found — generated a new one: ${PASSWORD}"
 fi
 
-# Match on the bare comm name only — see uninstall.sh for why the fuller
-# pattern never matches busybox's plain `ps` on this device. With the
-# broken pattern this guard never fired, so every launch tried (and
-# silently failed) to bind an already-occupied port instead of detecting
-# the existing server.
-if ps | grep -q '[d]ropbearmulti'; then
+# PID-file + /proc liveness check — more reliable than pattern-matching
+# `ps` output (which silently broke on this device's busybox: CMD gets
+# truncated to argv[0] with no arguments, so a fuller pattern never
+# matched, and every launch tried — and silently failed — to bind an
+# already-occupied port instead of detecting the existing server). The
+# PID file itself is written by dropbear's own -P flag below, not
+# guessed from $! — dropbear forks into the background by default (no
+# -F), so $! from this shell would only be the pre-fork process, not
+# the one that actually keeps running.
+if [ -f "${PIDFILE}" ] && [ -d "/proc/$(cat "${PIDFILE}" 2>/dev/null)" ]; then
     echo "Already running."
     exit 0
 fi
+rm -f "${PIDFILE}"
 
 # Stock firmware's INPUT chain default-policies to DROP and only allow-lists
 # a couple of Amazon-service ports, so inbound connections on our SSH port
@@ -52,11 +58,14 @@ iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT 2>/dev/null || \
 # 0.0.0.0: prefix forces IPv4-only bind — a bare port makes dropbear also try
 #          an IPv6 wildcard bind, which fails with "Address family not
 #          supported" since Kindle kernels have no IPv6 support at all.
-nohup "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 \
+# -P: dropbear writes its own (post-fork) pid here — see the liveness
+#     check above for why this is used instead of the backgrounding
+#     shell's $!.
+nohup "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 -P "${PIDFILE}" \
     >"${BASEDIR}/dropbear.log" 2>&1 &
 
 KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
 [ -z "${KINDLE_IP}" ] && KINDLE_IP="<kindle-ip — check Settings > Wi-Fi > (i) on the device>"
 
-echo "SSH server starting on port ${PORT} (pid $!)."
+echo "SSH server starting on port ${PORT}."
 echo "Connect: ssh -p ${PORT} root@${KINDLE_IP}   (sftp: same port)"

@@ -7,14 +7,46 @@
 # working SSH access on every single upgrade.
 BASEDIR="/mnt/us/usbnetlite"
 BINDIR="${BASEDIR}/bin"
+PIDFILE="${BASEDIR}/etc/dropbear.pid"
 
-# Match on the bare comm name only — busybox's plain `ps` (as opposed to
+# Prefer the pid dropbear itself wrote (via launch.sh's -P) — precise,
+# and doesn't depend on parsing `ps` output at all.
+KILLED_PIDS=""
+if [ -f "${PIDFILE}" ]; then
+    OLD_PID=$(cat "${PIDFILE}" 2>/dev/null)
+    kill "${OLD_PID}" 2>/dev/null
+    KILLED_PIDS="${OLD_PID}"
+    rm -f "${PIDFILE}"
+fi
+
+# Fallback for anything the pid file missed (stale/missing file, e.g. a
+# server started by an older package version pre-dating -P). Match on
+# the bare comm name only — busybox's plain `ps` (as opposed to
 # `ps -eo ... args`) truncates CMD to argv[0] with no arguments, so a
 # pattern requiring "dropbearmulti dropbear" together never matches here
 # and silently kills nothing. Confirmed on-device: this left the old
 # server running through every past upgrade.
 for PID in $(ps | grep '[d]ropbearmulti' | awk '{print $1}'); do
     kill "${PID}" 2>/dev/null
+    KILLED_PIDS="${KILLED_PIDS} ${PID}"
+done
+
+# kill only sends the signal — it doesn't wait for the process to
+# actually exit and release the port. Poll briefly rather than assuming
+# instant death, so a KPM upgrade that chains straight into the new
+# install.sh/launch.sh doesn't race the old process for the port
+# (confirmed hittable: an immediate re-launch right after this script
+# saw "No listening ports available" because the old process hadn't
+# released 0.0.0.0:2022 yet).
+WAITED=0
+while [ "${WAITED}" -lt 3 ]; do
+    STILL_ALIVE=0
+    for PID in ${KILLED_PIDS}; do
+        [ -d "/proc/${PID}" ] && STILL_ALIVE=1
+    done
+    [ "${STILL_ALIVE}" -eq 0 ] && break
+    sleep 1
+    WAITED=$((WAITED + 1))
 done
 
 rm -f "${BINDIR}/dropbearmulti" "${BINDIR}/sftp-server"
