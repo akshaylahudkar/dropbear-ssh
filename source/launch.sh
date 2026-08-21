@@ -35,10 +35,19 @@ iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT 2>/dev/null || \
 # -R: create host keys on first run if missing (written to the hardcoded
 #     /mnt/us/usbnetlite/etc/dropbear/dropbear_*_host_key paths)
 # -Y: master password — logs in as root with this password, no key needed
+# -K 60: send a keepalive every 60s so a session killed by the Kindle
+#        suspending WiFi (which cuts the link with no FIN, not a clean
+#        close) gets reaped instead of lingering as a zombie connection
+#        forever — verified on-device: a K=0 session survived 7+ hours
+#        past its client vanishing, a K=5 test session was reaped within
+#        one dead-link window.
+# -I 1800: also close sessions idle 30+ min regardless of link state, as
+#          a backstop (distinct mechanism from -K — this doesn't detect
+#          dead peers, just closes stale-but-technically-alive ones).
 # 0.0.0.0: prefix forces IPv4-only bind — a bare port makes dropbear also try
 #          an IPv6 wildcard bind, which fails with "Address family not
 #          supported" since Kindle kernels have no IPv6 support at all.
-nohup "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" \
+nohup "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 \
     >"${BASEDIR}/dropbear.log" 2>&1 &
 
 KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
