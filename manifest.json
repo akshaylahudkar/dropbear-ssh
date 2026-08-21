@@ -32,6 +32,18 @@
           "supported_platforms": [
             "kindlehf"
           ]
+        },
+        {
+          "url": "packages/dropbear-ssh/artifacts/dropbear-ssh_0.1.2_kindlehf.kpkg",
+          "version": [
+            0,
+            1,
+            2
+          ],
+          "dependencies": [],
+          "supported_platforms": [
+            "kindlehf"
+          ]
         }
       ]
     }

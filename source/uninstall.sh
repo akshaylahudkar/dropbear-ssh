@@ -8,7 +8,12 @@
 BASEDIR="/mnt/us/usbnetlite"
 BINDIR="${BASEDIR}/bin"
 
-for PID in $(ps | grep '[d]ropbearmulti dropbear' | awk '{print $1}'); do
+# Match on the bare comm name only — busybox's plain `ps` (as opposed to
+# `ps -eo ... args`) truncates CMD to argv[0] with no arguments, so a
+# pattern requiring "dropbearmulti dropbear" together never matches here
+# and silently kills nothing. Confirmed on-device: this left the old
+# server running through every past upgrade.
+for PID in $(ps | grep '[d]ropbearmulti' | awk '{print $1}'); do
     kill "${PID}" 2>/dev/null
 done
 

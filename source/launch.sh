@@ -18,7 +18,12 @@ if [ -z "${PASSWORD}" ]; then
     echo "No password file found — generated a new one: ${PASSWORD}"
 fi
 
-if ps | grep -q '[d]ropbearmulti dropbear'; then
+# Match on the bare comm name only — see uninstall.sh for why the fuller
+# pattern never matches busybox's plain `ps` on this device. With the
+# broken pattern this guard never fired, so every launch tried (and
+# silently failed) to bind an already-occupied port instead of detecting
+# the existing server.
+if ps | grep -q '[d]ropbearmulti'; then
     echo "Already running."
     exit 0
 fi
