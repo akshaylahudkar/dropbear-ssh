@@ -6,32 +6,51 @@ to build, no USB cable required once it's installed.
 
 ## Install
 
-Requires KPM (modern jailbreaks ship with it pre-installed). From `kterm`:
+Requires KPM (modern jailbreaks ship with it pre-installed). From the Kindle
+search bar, add this author's combined repo once:
 
-```
-KPM=/var/local/kmc/bin/kpm
-$KPM add-repo https://nealing.net/manifest.json
-$KPM -y update
-$KPM -y install dropbear-ssh
-$KPM launch dropbear-ssh
+```text
+;kpm add-repo https://nealing.net/manifest.json
 ```
 
-(`https://nealing.net/manifest.json` is this author's combined repo — it also
-has [sysmon](https://github.com/akshaylahudkar/sysmon). The old
+Then install:
+
+```text
+;kpm install dropbear-ssh
+```
+
+Launch it:
+
+```text
+;kpm launch dropbear-ssh
+```
+
+(`https://nealing.net/manifest.json` also has
+[sysmon](https://github.com/akshaylahudkar/sysmon) — the old
 `dropbear.nealing.net/manifest.json` URL still works too, it just redirects
 here now.)
 
-(From the search bar instead, type each line separately as `;kpm ...` — see
-[Install details](#install-details) for why the commands differ slightly.)
+Installation also adds a matching scriptlet to the Kindle library — after
+installing, **Dropbear SSH** shows up as a tappable entry on the Home screen,
+so future launches don't need the search bar at all.
 
-`kpm launch` prints your connect command with the Kindle's real IP:
+(From `kterm` instead, `kpm` needs its full path — see
+[Install details](#install-details) for why.)
+
+Launching (either the search-bar command or the Library scriptlet) opens a
+small status app showing whether the server is currently running, plus a
+**Start Server** / **Stop Server** button — tap it to toggle. When running,
+the screen shows your connect command with the Kindle's real IP and the
+current password:
 
 ```
 ssh -p 2022 root@<kindle-ip>
 ```
 
-Password is random, printed in the log — see [Password](#password) if you
-missed it.
+The button updates the same screen immediately, no need to relaunch —
+it's backed by a small on-device HTTP bridge (`nc` + a shell handler
+listening on loopback only, port `18022`) that the app's own button talks
+to; nothing is exposed beyond `127.0.0.1`.
 
 ## Password
 
@@ -43,9 +62,10 @@ missed it.
   it on via USB the same way you'd sideload a book, or from `kterm`:
   `echo "yourpassword" > /mnt/us/dropbear_password.txt`. The installer uses
   it and deletes the staging file.
-- **Change it later**: edit `/mnt/us/usbnetlite/etc/ssh_password`, then kill
-  any running `dropbearmulti dropbear` process and `kpm launch dropbear-ssh`
-  again (a running server already has the old one loaded in memory).
+- **Change it later**: edit `/mnt/us/usbnetlite/etc/ssh_password`, then use
+  the app's Stop/Start button to restart the server (a running server has
+  already loaded the old password into memory, so editing the file alone
+  won't take effect until it restarts).
 - **Back to random**: delete that file instead of editing it — the next
   launch generates a fresh one automatically.
 
@@ -119,14 +139,21 @@ your device model and `uname -r`.
   anything on the same network, not the internet, unless you've separately
   set up port forwarding.
 - Stock firmware's `iptables` INPUT chain default-drops inbound connections;
-  `launch.sh` re-opens the port on every launch (runtime kernel state, not
-  persisted).
+  `bridge_handler.sh` re-opens the port each time the server is started via
+  the button (runtime kernel state, not persisted).
 - Auth is dropbear's compiled-in master-password mechanism, not real user
   accounts — anyone with the password gets a root shell. Treat it like the
   root password it is.
+- The Start/Stop button talks to a small HTTP bridge (`nc` + a shell script)
+  bound to `127.0.0.1:18022` only — not reachable from the network, only
+  from processes running on the device itself. It has no auth of its own
+  (anything local can toggle the server or read the password back), which
+  is in line with this device's existing trust model — `lipc` itself is
+  the same way — but worth knowing if you're thinking about the threat
+  model closely.
 - `source/` in this repo has the exact `install.sh`/`launch.sh`/
-  `uninstall.sh` and binaries bundled in the `.kpkg` — worth a read before
-  installing anything that gets you root over SSH.
+  `bridge_handler.sh`/`uninstall.sh` and binaries bundled in the `.kpkg` —
+  worth a read before installing anything that gets you root over SSH.
 </details>
 
 <details>

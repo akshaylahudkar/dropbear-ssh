@@ -69,6 +69,47 @@ if [ ! -f "${PASSFILE}" ]; then
     fi
 fi
 
+# Status/toggle UI — a real mesquite app window (same appreg pattern as
+# sysmon/reading-stats), not raw fbink text. fbink-held text was tried
+# first and confirmed unreliable: this device's scriptlet launcher wipes
+# the screen a few seconds in regardless of the script's own sleep,
+# apparently assuming every scriptlet hands off to a real app window.
+# APP_ID deliberately has NO hyphen — confirmed the hard way on a past
+# app that hyphens in a com.akshay.X app id break appmgrd's LIPC `load`
+# routing (DBus naming rule), causing a silent 10s timeout with no window
+# ever appearing.
+TARGET_DIR="/var/local/mesquite/dropbear-ssh"
+DB="/var/local/appreg.db"
+APP_ID="com.akshay.dropbearssh"
+
+rm -rf "${TARGET_DIR}"
+cp -r "${SCRIPT_DIR}/app" "${TARGET_DIR}"
+chmod +x "${TARGET_DIR}/bridge_handler.sh"
+
+sqlite3 "$DB" <<EOF
+INSERT OR IGNORE INTO interfaces(interface) VALUES('application');
+INSERT OR IGNORE INTO handlerIds(handlerId) VALUES('$APP_ID');
+INSERT OR REPLACE INTO properties(handlerId,name,value)
+  VALUES('$APP_ID','lipcId','$APP_ID');
+INSERT OR REPLACE INTO properties(handlerId,name,value)
+  VALUES('$APP_ID','command','/usr/bin/mesquite -l $APP_ID -c file://$TARGET_DIR/');
+INSERT OR REPLACE INTO properties(handlerId,name,value)
+  VALUES('$APP_ID','supportedOrientation','U');
+EOF
+
+# Kindle Library scriptlet — a .sh file dropped in documents/ shows up as a
+# tappable entry on the Home screen/Library, same convention as kTerm's own
+# launcher. Kept minimal (just proxies to kpm) rather than duplicating launch
+# logic inline, so there's exactly one place (launch.sh) that can drift.
+cat > "/mnt/us/documents/dropbear-ssh.sh" <<'SCRIPTLET'
+#!/bin/sh
+# Name: Dropbear SSH
+# Author: Akshay
+# DontUseFBInk
+/var/local/kmc/bin/kpm launch dropbear-ssh
+SCRIPTLET
+chmod +x "/mnt/us/documents/dropbear-ssh.sh"
+
 echo "Installed. Launch with: kpm launch dropbear-ssh"
 echo "Password: $(cat "${PASSFILE}")"
 echo "(If installing from the search bar, this output may flash and vanish"
