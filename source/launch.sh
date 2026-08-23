@@ -29,8 +29,15 @@ fi
 # dropbear, nc doesn't fork away from this shell, so $! is the actual
 # running process (no equivalent of dropbear's own -P needed).
 if ! { [ -f "${BRIDGE_PIDFILE}" ] && [ -d "/proc/$(cat "${BRIDGE_PIDFILE}" 2>/dev/null)" ]; }; then
+    # </dev/null here for the exact same reason it matters on dropbear's
+    # own invocation below: this is a long-running background process, so
+    # without it, it inherits stdin from whatever launched this script —
+    # harmless from an interactive kterm shell, but confirmed the hard
+    # way that `kpm launch` (via the Library scriptlet or the search bar)
+    # hangs waiting for that pipe's EOF, which a forever-running listener
+    # never provides.
     nohup nc -lk -p "${BRIDGE_PORT}" -e "${TARGET_DIR}/bridge_handler.sh" \
-        >"${BASEDIR}/bridge.log" 2>&1 &
+        </dev/null >"${BASEDIR}/bridge.log" 2>&1 &
     echo $! > "${BRIDGE_PIDFILE}"
 fi
 
@@ -60,4 +67,4 @@ EOF
 # kill) so every open gets a genuinely fresh process and page load.
 lipc-set-prop com.lab126.appmgrd stop app://${APP_ID} 2>/dev/null
 sleep 1
-nohup lipc-set-prop com.lab126.appmgrd start app://${APP_ID} >/dev/null 2>&1 &
+nohup lipc-set-prop com.lab126.appmgrd start app://${APP_ID} </dev/null >/dev/null 2>&1 &
