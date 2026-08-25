@@ -6,39 +6,54 @@ to build, no USB cable required once it's installed.
 
 ## Install
 
-Requires KPM (modern jailbreaks ship with it pre-installed). From the Kindle
-search bar, add this author's combined repo once:
+Requires KPM (modern jailbreaks ship with it pre-installed). Two ways to
+install:
+
+**Option A — USB, no terminal needed (recommended for a first install):**
+
+1. Download [`install-dropbear-ssh.sh`](install-dropbear-ssh.sh) from this repo.
+2. Copy it onto the Kindle via USB, into the `documents` folder — same
+   drag-and-drop as sideloading a book.
+3. Eject, then tap **Install Dropbear SSH** on the Home screen/Library. If
+   it doesn't show up immediately, reboot the Kindle — the file's there but
+   the Home screen's content index doesn't always pick it up until the next
+   rescan.
+
+That's it — it adds the repo, installs, and launches the app in one tap.
+Re-running it later (e.g. to reinstall) is safe.
+
+**Option B — `kterm` or any terminal over SSH**, useful if you already have
+SSH access another way, or want to see real output instead of a silent tap.
+If you don't have `kterm` yet, install it from the search bar first (no
+`add-repo` needed — it's on KPM's official default repo):
 
 ```text
-;kpm add-repo https://nealing.net/manifest.json
+;kpm install kterm
 ```
 
-Then install:
+Then open **Kterm** from the Home screen/Library and run:
 
 ```text
-;kpm install dropbear-ssh
+KPM=/var/local/kmc/bin/kpm
+$KPM add-repo https://nealing.net/manifest.json
+$KPM install dropbear-ssh
+$KPM launch dropbear-ssh
 ```
 
-Launch it:
-
-```text
-;kpm launch dropbear-ssh
-```
+(KPM's own installer never puts `kpm` on `PATH`, so the full path is
+required here.)
 
 (`https://nealing.net/manifest.json` also has
 [sysmon](https://github.com/akshaylahudkar/sysmon) — the old
 `dropbear.nealing.net/manifest.json` URL still works too, it just redirects
 here now.)
 
-Installation also adds a matching scriptlet to the Kindle library — after
-installing, **Dropbear SSH** shows up as a tappable entry on the Home screen,
-so future launches don't need the search bar at all.
+Either way, install also adds a matching scriptlet to the Kindle library —
+after installing, **Dropbear SSH** shows up as its own tappable entry on the
+Home screen, so future launches don't need USB or a terminal at all.
 
-(From `kterm` instead, `kpm` needs its full path — see
-[Install details](#install-details) for why.)
-
-Launching (either the search-bar command or the Library scriptlet) opens a
-small status app showing whether the server is currently running, plus a
+Launching (the bootstrap scriptlet, the Library entry, or the kterm command)
+opens a small status app showing whether the server is currently running, plus a
 **Start Server** / **Stop Server** button — tap it to toggle. When running,
 the screen shows your connect command with the Kindle's real IP and the
 current password:
@@ -72,15 +87,11 @@ to; nothing is exposed beyond `127.0.0.1`.
 <details>
 <summary><strong id="install-details">Install details</strong></summary>
 
-- **KPM itself**: modern jailbreaks ship with it pre-installed — try
-  `;kpm update` from the search bar to check. If you're on an older
-  jailbreak without it, see the [KPM project](https://github.com/KindleModding/KPM)
-  for current install instructions (not duplicated here since they're
-  liable to change).
-- **Why `kterm` needs the full path**: KPM's own installer never puts `kpm`
-  on your `PATH` (confirmed straight from its `install.sh`), so bare `kpm`
-  fails with `not found` there. The search bar's own `;kpm` wiring resolves
-  the path for you already, so no full path needed for that one.
+- **KPM itself**: modern jailbreaks ship with it pre-installed — check for
+  `/var/local/kmc/bin/kpm` via kterm, or just try Option A above and see if
+  it works. If you're on an older jailbreak without it, see the
+  [KPM project](https://github.com/KindleModding/KPM) for current install
+  instructions (not duplicated here since they're liable to change).
 - **What `nealing.net` is**: a Cloudflare Worker that transparently proxies
   this author's repos' `manifest.json`/`.kpkg` files straight from GitHub —
   shorter to type than the raw GitHub URL, and (confirmed on real hardware)
@@ -116,20 +127,26 @@ Two reasons:
 <details>
 <summary><strong>What's verified, what isn't</strong></summary>
 
-Tested end-to-end (install → launch → real SSH session → survives an
-upgrade/downgrade) on a **Kindle PaperWhite 4, kernel `4.1.x`**
-(2018–2022-era hardware — PW4, Basic3, Oasis3, PW5, Basic4, Scribe, per
-upstream's own release device list).
+Tested end-to-end (install via both the USB scriptlet and `kterm` → launch
+→ real SSH session → survives an upgrade/downgrade/reinstall) on a
+**Kindle PaperWhite 4, kernel `4.1.x`** (2018–2022-era hardware — Basic3,
+Oasis3, Basic4, and Scribe also ship this kernel per upstream's own release
+device list; **Paperwhite 5 does not** — see below, despite being on the
+same upstream device list).
 
 The package also bundles a second binary build (`bin_11thgenplus`) covering
 upstream's broader device list — 2011-era Kindle Touch through 2024
 PaperWhite 6 / Scribe 2 / ColorSoft — auto-selected by kernel version at
-install time (`4.1.x` → the tested build; anything else → this one). **That
-second build is only confirmed to execute** (same ELF architecture/ABI); a
-real end-to-end test crashed with `Connection reset by peer` during the SSH
-key exchange on the one device available. If it doesn't work for you outside
-the `4.1.x` family, that's the known-unverified path — open an issue with
-your device model and `uname -r`.
+install time (`4.1.x` → the tested build; anything else → this one).
+
+That second build is now **confirmed working end-to-end** (install → launch
+→ real SSH session) on a **Kindle Paperwhite 5, kernel `4.9.77`**. It's
+still only confirmed on that one device — an earlier test on a different,
+unspecified device in this same kernel branch crashed with
+`Connection reset by peer` during the SSH key exchange, so this path may
+still be device-specific rather than universally working across the whole
+11thgenplus device list. If it doesn't work for you outside the `4.1.x`
+family, open an issue with your device model and `uname -r`.
 </details>
 
 <details>
