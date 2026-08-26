@@ -11,16 +11,19 @@ install:
 
 **Option A — USB, no terminal needed (recommended for a first install):**
 
-1. Download [`install-dropbear-ssh.sh`](install-dropbear-ssh.sh) from this repo.
+1. Download [`dropbear-ssh.sh`](dropbear-ssh.sh) from this repo.
 2. Copy it onto the Kindle via USB, into the `documents` folder — same
    drag-and-drop as sideloading a book.
-3. Eject, then tap **Install Dropbear SSH** on the Home screen/Library. If
-   it doesn't show up immediately, reboot the Kindle — the file's there but
+3. Eject, then tap **Dropbear SSH** on the Home screen/Library. If it
+   doesn't show up immediately, reboot the Kindle — the file's there but
    the Home screen's content index doesn't always pick it up until the next
    rescan.
 
-That's it — it adds the repo, installs, and launches the app in one tap.
-Re-running it later (e.g. to reinstall) is safe.
+This one file is both the installer and the permanent launcher — the first
+tap adds the repo, installs, and launches; every tap after that just
+launches (re-affirming the install along the way, harmlessly). There's
+nothing else to copy over later, and no separate entry gets added — this
+stays the one icon for this package.
 
 **Option B — `kterm` or any terminal over SSH**, useful if you already have
 SSH access another way, or want to see real output instead of a silent tap.
@@ -48,12 +51,8 @@ required here.)
 `dropbear.nealing.net/manifest.json` URL still works too, it just redirects
 here now.)
 
-Either way, install also adds a matching scriptlet to the Kindle library —
-after installing, **Dropbear SSH** shows up as its own tappable entry on the
-Home screen, so future launches don't need USB or a terminal at all.
-
-Launching (the bootstrap scriptlet, the Library entry, or the kterm command)
-opens a small status app showing whether the server is currently running, plus a
+Launching (the `dropbear-ssh.sh` scriptlet or the kterm command) opens a
+small status app showing whether the server is currently running, plus a
 **Start Server** / **Stop Server** button — tap it to toggle. When running,
 the screen shows your connect command with the Kindle's real IP and the
 current password:

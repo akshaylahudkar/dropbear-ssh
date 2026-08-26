@@ -97,18 +97,13 @@ INSERT OR REPLACE INTO properties(handlerId,name,value)
   VALUES('$APP_ID','supportedOrientation','U');
 EOF
 
-# Kindle Library scriptlet — a .sh file dropped in documents/ shows up as a
-# tappable entry on the Home screen/Library, same convention as kTerm's own
-# launcher. Kept minimal (just proxies to kpm) rather than duplicating launch
-# logic inline, so there's exactly one place (launch.sh) that can drift.
-cat > "/mnt/us/documents/dropbear-ssh.sh" <<'SCRIPTLET'
-#!/bin/sh
-# Name: Dropbear SSH
-# Author: Akshay
-# DontUseFBInk
-/var/local/kmc/bin/kpm launch dropbear-ssh
-SCRIPTLET
-chmod +x "/mnt/us/documents/dropbear-ssh.sh"
+# NOTE: this package intentionally does NOT write a Library scriptlet here.
+# The repo ships dropbear-ssh.sh at /mnt/us/documents/dropbear-ssh.sh as the
+# install trigger itself (see repo root) — if this script wrote to that same
+# path, it would be truncating the very file the shell is mid-way through
+# reading and executing (kpm runs install.sh as a direct consequence of that
+# scriptlet's own `kpm install` line), which is undefined behavior, not just
+# redundant. uninstall.sh still removes that file on uninstall.
 
 echo "Installed. Launch with: kpm launch dropbear-ssh"
 echo "Password: $(cat "${PASSFILE}")"
