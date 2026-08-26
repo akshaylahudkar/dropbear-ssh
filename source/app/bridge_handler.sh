@@ -4,16 +4,16 @@
 # stdout directly to the socket — so anything this script writes to
 # stdout IS the HTTP response, and anything unexpected on stdout (echoed
 # command output, etc.) would corrupt it. Every command below that could
-# print on success is silenced accordingly; only respond() writes to
-# stdout.
+# print on success is silenced accordingly; only respond() and the
+# inline /update response write to stdout.
 #
-# Two actions now, routed by request path: the request line (e.g.
+# Three actions now, routed by request path: the request line (e.g.
 # "GET /keepawake?t=... HTTP/1.1") is read once at the top and matched
-# against "/keepawake" — anything else (including the original bare "/"
-# the server toggle has always used) falls through to that original
-# behavior. Confirmed working end-to-end: the mesquite webview's XHR can
-# reach 127.0.0.1 despite the page being loaded from file://, no CORS
-# headaches needed.
+# against "/keepawake" and "/update" — anything else (including the
+# original bare "/" the server toggle has always used) falls through to
+# that original behavior. Confirmed working end-to-end: the mesquite
+# webview's XHR can reach 127.0.0.1 despite the page being loaded from
+# file://, no CORS headaches needed.
 BASEDIR="/mnt/us/usbnetlite"
 BINDIR="${BASEDIR}/bin"
 PASSFILE="${BASEDIR}/etc/ssh_password"
@@ -30,6 +30,47 @@ keepawake_state() {
     else
         echo "false"
     fi
+}
+
+# The Start button's own logic, extracted to a function purely so it
+# reads cleanly next to the toggle-check that decides whether to call it.
+# update_helper.sh has its own small, separate copy of this same
+# sequence for its post-update restart — deliberately not calling into
+# this one, since that file lives in the same directory kpm install just
+# overwrote and shouldn't be assumed stable mid-run. See that file for
+# why.
+start_dropbear() {
+    PASSWORD=$(cat "${PASSFILE}" 2>/dev/null)
+    if [ -z "${PASSWORD}" ]; then
+        PASSWORD=$(dd if=/dev/urandom bs=1 count=6 2>/dev/null | od -An -tx1 2>/dev/null | tr -d ' \n')
+        [ -z "${PASSWORD}" ] && PASSWORD="kp$$$(date +%s 2>/dev/null)"
+        mkdir -p "${BASEDIR}/etc"
+        echo "${PASSWORD}" > "${PASSFILE}"
+    fi
+    iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT >/dev/null 2>&1 || \
+        iptables -I INPUT -p tcp --dport "${PORT}" -j ACCEPT >/dev/null 2>&1
+
+    # See launch.sh's git history for why every flag here is what it is
+    # (keepalive/idle-timeout tuning, IPv4-only bind, etc.).
+    #
+    # LD_LIBRARY_PATH=BINDIR: some newer Kindle firmware doesn't ship
+    # libcrypt.so.1 (needed for -Y's crypt() call) in its system library
+    # path at all — install.sh bundles a copy in BINDIR for exactly that
+    # case. This is a no-op on devices that already have their own
+    # libcrypt.so.1 system-wide (the dynamic linker just finds ours first).
+    #
+    # setsid: confirmed the hard way that closing the status app stops the
+    # server — dropbear forks and daemonizes itself (two different PIDs
+    # show up in its own log), but that fork never leaves the process
+    # group it inherited from this chain (nc -e -> this script ->
+    # dropbearmulti), which traces back to the app's own process tree.
+    # appmgrd stopping the app on close signals that whole group, catching
+    # dropbear in it despite the self-fork. setsid puts it in a brand new
+    # session, fully independent of whatever launched it — the actual
+    # fix, not just nohup (which only blocks SIGHUP, not a process-group
+    # signal).
+    LD_LIBRARY_PATH="${BINDIR}" setsid "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 -P "${PIDFILE}" \
+        </dev/null >"${BASEDIR}/dropbear.log" 2>&1 &
 }
 
 respond() {
@@ -51,6 +92,38 @@ JSON
     LEN=$(printf '%s' "${BODY}" | wc -c | tr -d ' ')
     printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' "${LEN}" "${BODY}"
 }
+
+# ── /update: kick off an install of whatever's currently latest, via a
+# separate detached script (update_helper.sh), NOT inline here. kpm
+# install replaces this whole app/ directory, including this exact file
+# — if bridge_handler.sh ran `kpm install` on its own package and then
+# kept running to report the result, that overwrite would truncate the
+# very script the shell is still mid-way through reading (same class of
+# bug fixed in 0.1.7 for dropbear-ssh.sh). Launching a separate,
+# disposable file via setsid and responding immediately sidesteps that
+# entirely — this response only confirms the update started, not that it
+# finished; reopen the app afterward to see the result and, if the
+# server was running, tap Start Server if update_helper.sh's own restart
+# didn't already show it running again.
+case "${REQUEST_LINE}" in
+    *"/update"*)
+        setsid sh "${TARGET_DIR}/update_helper.sh" </dev/null >/dev/null 2>&1 &
+
+        RUNNING="false"
+        KINDLE_IP=""
+        if [ -f "${PIDFILE}" ] && [ -d "/proc/$(cat "${PIDFILE}" 2>/dev/null)" ]; then
+            RUNNING="true"
+            KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
+        fi
+        BODY=$(cat <<JSON
+{"time":"$(date '+%H:%M:%S')","update_started":true,"running":${RUNNING},"port":${PORT},"ip":"${KINDLE_IP}","password":"$(cat "${PASSFILE}" 2>/dev/null)","keepawake":$(keepawake_state)}
+JSON
+)
+        LEN=$(printf '%s' "${BODY}" | wc -c | tr -d ' ')
+        printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' "${LEN}" "${BODY}"
+        exit 0
+        ;;
+esac
 
 # ── /keepawake: toggle the sleep-deferral loop, independent of the SSH
 # server's own state. Whatever the current dropbear state is, report it
@@ -97,39 +170,10 @@ fi
 rm -f "${PIDFILE}"
 
 # ── Not running: START ───────────────────────────────────────────────
-PASSWORD=$(cat "${PASSFILE}" 2>/dev/null)
-if [ -z "${PASSWORD}" ]; then
-    PASSWORD=$(dd if=/dev/urandom bs=1 count=6 2>/dev/null | od -An -tx1 2>/dev/null | tr -d ' \n')
-    [ -z "${PASSWORD}" ] && PASSWORD="kp$$$(date +%s 2>/dev/null)"
-    mkdir -p "${BASEDIR}/etc"
-    echo "${PASSWORD}" > "${PASSFILE}"
-fi
-
-iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT >/dev/null 2>&1 || \
-    iptables -I INPUT -p tcp --dport "${PORT}" -j ACCEPT >/dev/null 2>&1
-
-# See launch.sh's git history for why every flag here is what it is
-# (keepalive/idle-timeout tuning, IPv4-only bind, etc.) — this is the
-# exact same invocation, just triggered by the button instead of a tap
-# on the outside Library icon.
-#
-# LD_LIBRARY_PATH=BINDIR: some newer Kindle firmware doesn't ship
-# libcrypt.so.1 (needed for -Y's crypt() call) in its system library path
-# at all — install.sh bundles a copy in BINDIR for exactly that case. This
-# is a no-op on devices that already have their own libcrypt.so.1 system-
-# wide (the dynamic linker just finds ours first).
-#
-# setsid: confirmed the hard way that closing the status app stops the
-# server — dropbear forks and daemonizes itself (two different PIDs show
-# up in its own log), but that fork never leaves the process group it
-# inherited from this chain (nc -e -> this script -> dropbearmulti), which
-# traces back to the app's own process tree. appmgrd stopping the app on
-# close signals that whole group, catching dropbear in it despite the
-# self-fork. setsid puts it in a brand new session, fully independent of
-# whatever launched it — the actual fix, not just nohup (which only blocks
-# SIGHUP, not a process-group signal).
-LD_LIBRARY_PATH="${BINDIR}" setsid "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 -P "${PIDFILE}" \
-    </dev/null >"${BASEDIR}/dropbear.log" 2>&1 &
+# start_dropbear (defined near the top) carries the real explanation for
+# LD_LIBRARY_PATH and setsid — this is just where that logic used to live
+# inline before /update needed to call it too.
+start_dropbear
 
 KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
 

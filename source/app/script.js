@@ -80,6 +80,8 @@ function renderUI(data) {
     keepawakeCheck.checked = !!data.keepawake;
     keepawakeCheck.disabled = !BRIDGE_URL;
 
+    document.getElementById("update-btn").disabled = !BRIDGE_URL;
+
     setStatus("Updated " + data.time);
 }
 
@@ -144,6 +146,50 @@ function toggleKeepawake() {
     xhr.send();
 }
 
+function runUpdate() {
+    if (!BRIDGE_URL) { return; }
+    var updateBtn = document.getElementById("update-btn");
+    updateBtn.disabled = true;
+    updateBtn.textContent = "Updating...";
+    setStatus("Update started...");
+
+    var xhr = new XMLHttpRequest();
+    // /update: bridge_handler.sh kicks off the real install in a
+    // detached helper script and responds immediately (this route
+    // never waits for the install to finish — see that file for why),
+    // so this response only confirms the update started, not its
+    // result. There's no reliable "it's done" signal to wait for from
+    // here — reopening the app afterward is what shows the real result.
+    xhr.open("GET", BRIDGE_URL + "update?t=" + Date.now(), true);
+    xhr.timeout = 8000;
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) { return; }
+        updateBtn.textContent = "Check for Update";
+        if (xhr.status === 200 || xhr.status === 0) {
+            var data;
+            try { data = JSON.parse(xhr.responseText); }
+            catch (e) { setStatus("Parse error"); updateBtn.disabled = false; return; }
+            renderUI(data);
+            setStatus("Update started — reopen the app in a few seconds to see the result");
+        } else {
+            setStatus("Update failed to start (" + xhr.status + ")");
+            updateBtn.disabled = false;
+        }
+    };
+    xhr.ontimeout = function() {
+        updateBtn.textContent = "Check for Update";
+        setStatus("Update request timed out");
+        updateBtn.disabled = false;
+    };
+    xhr.onerror = function() {
+        updateBtn.textContent = "Check for Update";
+        setStatus("Update request error");
+        updateBtn.disabled = false;
+    };
+    xhr.send();
+}
+
 function setStatus(msg) {
     document.getElementById("status-line").innerHTML = msg;
 }
@@ -151,5 +197,6 @@ function setStatus(msg) {
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("toggle-btn").addEventListener("click", toggleServer);
     document.getElementById("keepawake-check").addEventListener("change", toggleKeepawake);
+    document.getElementById("update-btn").addEventListener("click", runUpdate);
     fetchStatus();
 });

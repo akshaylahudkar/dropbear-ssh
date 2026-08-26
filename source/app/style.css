@@ -104,6 +104,21 @@ table.stat-table td.stat-value {
     line-height: 1.4;
 }
 
+.update-btn {
+    display: block;
+    width: 100%;
+    font-size: 16px;
+    padding: 10px 0;
+    margin-top: 18px;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #000000;
+}
+.update-btn:disabled {
+    color: #888888;
+    border-color: #888888;
+}
+
 .status-line {
     font-size: 14px;
     text-align: right;

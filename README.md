@@ -70,6 +70,13 @@ That always hits the network and installs whatever's currently latest,
 regardless of what's already there — no need to re-add the repo if you've
 already done that once.
 
+Or skip `kterm` entirely — the app itself has a **Check for Update**
+button that does the same thing, restarting the server afterward if it
+was running. Its response only confirms the update started, not that it
+finished (the actual install runs in the background so it can safely
+overwrite the app's own files) — reopen the app after a few seconds to
+see the result.
+
 (`https://nealing.net/manifest.json` also has
 [sysmon](https://github.com/akshaylahudkar/sysmon) — the old
 `dropbear.nealing.net/manifest.json` URL still works too, it just redirects
