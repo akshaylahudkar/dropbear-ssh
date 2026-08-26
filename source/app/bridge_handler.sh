@@ -63,7 +63,23 @@ iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT >/dev/null 2>&1 || \
 # (keepalive/idle-timeout tuning, IPv4-only bind, etc.) — this is the
 # exact same invocation, just triggered by the button instead of a tap
 # on the outside Library icon.
-nohup "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 -P "${PIDFILE}" \
+#
+# LD_LIBRARY_PATH=BINDIR: some newer Kindle firmware doesn't ship
+# libcrypt.so.1 (needed for -Y's crypt() call) in its system library path
+# at all — install.sh bundles a copy in BINDIR for exactly that case. This
+# is a no-op on devices that already have their own libcrypt.so.1 system-
+# wide (the dynamic linker just finds ours first).
+#
+# setsid: confirmed the hard way that closing the status app stops the
+# server — dropbear forks and daemonizes itself (two different PIDs show
+# up in its own log), but that fork never leaves the process group it
+# inherited from this chain (nc -e -> this script -> dropbearmulti), which
+# traces back to the app's own process tree. appmgrd stopping the app on
+# close signals that whole group, catching dropbear in it despite the
+# self-fork. setsid puts it in a brand new session, fully independent of
+# whatever launched it — the actual fix, not just nohup (which only blocks
+# SIGHUP, not a process-group signal).
+LD_LIBRARY_PATH="${BINDIR}" setsid "${BINDIR}/dropbearmulti" dropbear -R -p "0.0.0.0:${PORT}" -Y "${PASSWORD}" -K 60 -I 1800 -P "${PIDFILE}" \
     </dev/null >"${BASEDIR}/dropbear.log" 2>&1 &
 
 KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')

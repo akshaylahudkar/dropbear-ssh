@@ -49,7 +49,7 @@ while [ "${WAITED}" -lt 3 ]; do
     WAITED=$((WAITED + 1))
 done
 
-rm -f "${BINDIR}/dropbearmulti" "${BINDIR}/sftp-server"
+rm -f "${BINDIR}/dropbearmulti" "${BINDIR}/sftp-server" "${BINDIR}/libcrypt.so.1"
 
 # Loopback HTTP bridge behind the app's Start/Stop button — its pidfile
 # lives in the same shared BASEDIR/etc as dropbear's own, deliberately

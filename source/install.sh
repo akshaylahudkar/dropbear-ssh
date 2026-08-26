@@ -42,6 +42,22 @@ cp -f "${SRC}/dropbearmulti" "${BINDIR}/dropbearmulti" || { echo "ERROR: failed 
 cp -f "${SRC}/sftp-server" "${BINDIR}/sftp-server" || { echo "ERROR: failed to copy ${SRC}/sftp-server — aborting install."; exit 1; }
 chmod +x "${BINDIR}/dropbearmulti" "${BINDIR}/sftp-server"
 
+# bin_11thgenplus only: newer Kindle firmware (confirmed on a 2024-era
+# Paperwhite 6, kernel 5.15.x) doesn't ship libcrypt.so.1 in its system
+# library path at all, which dropbearmulti needs for the -Y master-password
+# flag's crypt() call — it fails to even start with "error while loading
+# shared libraries: libcrypt.so.1". Same root cause as a known KOReader
+# issue on the same device class (github.com/koreader/koreader/issues/14389).
+# Extracted from a working device (Paperwhite 5, kernel 4.9.x, armhf —
+# confirmed same ELF architecture as these binaries) rather than trusting a
+# random third-party binary. bin_khf/PW4 never hits this, so it's not
+# bundled there. launch.sh/bridge_handler.sh point LD_LIBRARY_PATH at
+# BINDIR so this gets picked up when present; harmless no-op copy on
+# devices whose system library is already there.
+if [ -f "${SRC}/libcrypt.so.1" ]; then
+    cp -f "${SRC}/libcrypt.so.1" "${BINDIR}/libcrypt.so.1"
+fi
+
 # Random per-install password for the master-password auth flag (-Y) — a
 # fixed default (e.g. "kindle") would make every install of this package
 # guessable, so generate one instead. 6 bytes of /dev/urandom as hex (12
