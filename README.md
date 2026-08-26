@@ -46,6 +46,10 @@ $KPM launch dropbear-ssh
 (KPM's own installer never puts `kpm` on `PATH`, so the full path is
 required here.)
 
+This also adds the same Home-screen icon as Option A, if one doesn't
+already exist — so future launches don't need `kterm` at all unless you
+want it.
+
 (`https://nealing.net/manifest.json` also has
 [sysmon](https://github.com/akshaylahudkar/sysmon) — the old
 `dropbear.nealing.net/manifest.json` URL still works too, it just redirects
