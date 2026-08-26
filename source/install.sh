@@ -117,14 +117,15 @@ EOF
 # an install triggered purely from kterm (README's Option B) also ends up
 # with a tappable Home-screen entry, same as Option A. The existence check
 # is what makes this safe: this exact file is what Option A's own tap
-# executes (dropbear-ssh.sh's `kpm install` line is what leads here), so
-# unconditionally overwriting it here would mean truncating the very
-# script the shell is still mid-way through reading — undefined behavior,
-# not just redundant (this was a real bug, fixed in 0.1.7). By the time
-# that scriptlet is running, it obviously already exists, so this block
-# never fires in that path — it only fires for a genuinely fresh kterm
-# install where nothing's there yet. uninstall.sh deliberately never
-# removes this file either way, same as it never touches kterm.sh.
+# executes (its own `if [ ! -d ... ]` guarded `kpm install` line is what
+# leads here on a fresh install), so unconditionally overwriting it here
+# would mean truncating the very script the shell is still mid-way through
+# reading — undefined behavior, not just redundant (this was a real bug,
+# fixed in 0.1.7). By the time that scriptlet is running, it obviously
+# already exists, so this block never fires in that path — it only fires
+# for a genuinely fresh kterm install where nothing's there yet.
+# uninstall.sh deliberately never removes this file either way, same as
+# it never touches kterm.sh.
 if [ ! -f "/mnt/us/documents/dropbear-ssh.sh" ]; then
     cat > "/mnt/us/documents/dropbear-ssh.sh" <<'SCRIPTLET'
 #!/bin/sh
@@ -132,8 +133,10 @@ if [ ! -f "/mnt/us/documents/dropbear-ssh.sh" ]; then
 # Author: Akshay
 # DontUseFBInk
 KPM=/var/local/kmc/bin/kpm
-$KPM add-repo https://nealing.net/manifest.json
-$KPM install dropbear-ssh
+if [ ! -d /mnt/us/kmc/kpm/packages/dropbear-ssh ]; then
+    $KPM add-repo https://nealing.net/manifest.json
+    $KPM install dropbear-ssh
+fi
 $KPM launch dropbear-ssh
 SCRIPTLET
     chmod +x "/mnt/us/documents/dropbear-ssh.sh"

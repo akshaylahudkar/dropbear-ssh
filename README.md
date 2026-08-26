@@ -19,11 +19,16 @@ install:
    the Home screen's content index doesn't always pick it up until the next
    rescan.
 
-This one file is both the installer and the permanent launcher — the first
-tap adds the repo, installs, and launches; every tap after that just
-launches (re-affirming the install along the way, harmlessly). There's
-nothing else to copy over later, and no separate entry gets added — this
-stays the one icon for this package.
+This one file is both the installer and the permanent launcher — the
+first tap installs and launches; every tap after that just launches,
+without touching the install at all (confirmed the hard way: `kpm
+install` restarts the running server on *every* call, even when nothing
+changed, so reopening used to kill it every time — fixed by only
+installing on that genuinely first tap). There's nothing else to copy
+over later, and no separate entry gets added — this stays the one icon
+for this package. One trade-off: since it only installs once, reopening
+no longer auto-updates to a newer version — grab a fresh copy of this
+file (or use Option B) to actually upgrade.
 
 **Option B — `kterm` or any terminal over SSH**, useful if you already have
 SSH access another way, or want to see real output instead of a silent tap.
@@ -49,6 +54,21 @@ required here.)
 This also adds the same Home-screen icon as Option A, if one doesn't
 already exist — so future launches don't need `kterm` at all unless you
 want it.
+
+## Updating to a new version
+
+Tapping the Home-screen icon only installs once (see above for why) — to
+actually pick up a newer version later, run the install line from Option B
+in `kterm` again:
+
+```text
+KPM=/var/local/kmc/bin/kpm
+$KPM install dropbear-ssh
+```
+
+That always hits the network and installs whatever's currently latest,
+regardless of what's already there — no need to re-add the repo if you've
+already done that once.
 
 (`https://nealing.net/manifest.json` also has
 [sysmon](https://github.com/akshaylahudkar/sysmon) — the old
