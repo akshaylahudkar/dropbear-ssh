@@ -51,6 +51,7 @@ function renderUI(data) {
     var stateEl = document.getElementById("state");
     var detailsSection = document.getElementById("details-section");
     var btn = document.getElementById("toggle-btn");
+    var keepawakeCheck = document.getElementById("keepawake-check");
 
     if (data.running) {
         stateEl.textContent = "RUNNING";
@@ -75,6 +76,9 @@ function renderUI(data) {
         btn.textContent = "Start Server";
     }
     btn.disabled = !BRIDGE_URL;
+
+    keepawakeCheck.checked = !!data.keepawake;
+    keepawakeCheck.disabled = !BRIDGE_URL;
 
     setStatus("Updated " + data.time);
 }
@@ -106,11 +110,46 @@ function toggleServer() {
     xhr.send();
 }
 
+function toggleKeepawake() {
+    if (!BRIDGE_URL) { return; }
+    var keepawakeCheck = document.getElementById("keepawake-check");
+    keepawakeCheck.disabled = true;
+    setStatus("Working...");
+
+    var xhr = new XMLHttpRequest();
+    // /keepawake path is what bridge_handler.sh routes on — the plain
+    // BRIDGE_URL (no path) request toggleServer() sends is still the
+    // server toggle, unchanged.
+    xhr.open("GET", BRIDGE_URL + "keepawake?t=" + Date.now(), true);
+    xhr.timeout = 8000;
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) { return; }
+        if (xhr.status === 200 || xhr.status === 0) {
+            var data;
+            try { data = JSON.parse(xhr.responseText); }
+            catch (e) { setStatus("Parse error"); keepawakeCheck.disabled = false; return; }
+            // Full renderUI, not just the checkbox — the checkbox's own
+            // checked state already flipped optimistically when clicked,
+            // so this re-syncs it (and everything else) to whatever the
+            // device actually did, same pattern toggleServer() uses.
+            renderUI(data);
+        } else {
+            setStatus("Toggle failed (" + xhr.status + ")");
+            keepawakeCheck.disabled = false;
+        }
+    };
+    xhr.ontimeout = function() { setStatus("Toggle timed out"); keepawakeCheck.disabled = false; };
+    xhr.onerror   = function() { setStatus("Toggle error"); keepawakeCheck.disabled = false; };
+    xhr.send();
+}
+
 function setStatus(msg) {
     document.getElementById("status-line").innerHTML = msg;
 }
 
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("toggle-btn").addEventListener("click", toggleServer);
+    document.getElementById("keepawake-check").addEventListener("change", toggleKeepawake);
     fetchStatus();
 });

@@ -11,6 +11,7 @@
 BASEDIR="/mnt/us/usbnetlite"
 PASSFILE="${BASEDIR}/etc/ssh_password"
 PIDFILE="${BASEDIR}/etc/dropbear.pid"
+KEEPAWAKE_PIDFILE="${BASEDIR}/etc/keepawake.pid"
 PORT="2022"
 
 TARGET_DIR="/var/local/mesquite/dropbear-ssh"
@@ -49,6 +50,12 @@ else
     KINDLE_IP=""
 fi
 
+if [ -f "${KEEPAWAKE_PIDFILE}" ] && [ -d "/proc/$(cat "${KEEPAWAKE_PIDFILE}" 2>/dev/null)" ]; then
+    KEEPAWAKE=true
+else
+    KEEPAWAKE=false
+fi
+
 cat > "${TARGET_DIR}/status.json" <<EOF
 {
   "time": "$(date '+%H:%M:%S')",
@@ -56,7 +63,8 @@ cat > "${TARGET_DIR}/status.json" <<EOF
   "port": ${PORT},
   "bridge_port": ${BRIDGE_PORT},
   "ip": "${KINDLE_IP}",
-  "password": "$(cat "${PASSFILE}" 2>/dev/null)"
+  "password": "$(cat "${PASSFILE}" 2>/dev/null)",
+  "keepawake": ${KEEPAWAKE}
 }
 EOF
 

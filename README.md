@@ -70,6 +70,22 @@ it's backed by a small on-device HTTP bridge (`nc` + a shell handler
 listening on loopback only, port `18022`) that the app's own button talks
 to; nothing is exposed beyond `127.0.0.1`.
 
+## Keeping it reachable while the Kindle sleeps
+
+By default, a Kindle suspends WiFi when its screen sleeps — the server
+process itself stays alive, but nothing can reach it until the device
+wakes up again. The app has a **Keep reachable while Kindle sleeps**
+checkbox that defers the device's own suspend cycle for as long as it's
+on, so the connection keeps working through what would otherwise be sleep.
+
+This costs more battery — WiFi and the CPU stay active instead of
+suspending, which is the entire reason a Kindle suspends them on sleep in
+the first place. The screen itself costs nothing either way (e-ink only
+draws power while actively redrawing, not while holding a static image),
+so this isn't about the screen — only about the radio and CPU staying up.
+Turn it off when you don't need remote access, same as you'd turn off the
+server itself.
+
 ## Password
 
 - **Default**: random, printed in the install log, always readable
@@ -143,13 +159,33 @@ PaperWhite 6 / Scribe 2 / ColorSoft — auto-selected by kernel version at
 install time (`4.1.x` → the tested build; anything else → this one).
 
 That second build is now **confirmed working end-to-end** (install → launch
-→ real SSH session) on a **Kindle Paperwhite 5, kernel `4.9.77`**. It's
-still only confirmed on that one device — an earlier test on a different,
-unspecified device in this same kernel branch crashed with
-`Connection reset by peer` during the SSH key exchange, so this path may
-still be device-specific rather than universally working across the whole
-11thgenplus device list. If it doesn't work for you outside the `4.1.x`
-family, open an issue with your device model and `uname -r`.
+→ real SSH session) on a **Kindle Paperwhite 5, kernel `4.9.77`** and a
+**Kindle Paperwhite 6 (Véra jailbreak), kernel `5.15.41`** — the earlier
+crash reported on a different, unspecified device in this same kernel
+branch (`Connection reset by peer` during the SSH key exchange) turned out
+to be a separate issue, not something specific to that device. If it
+doesn't work for you outside the `4.1.x` family, open an issue with your
+device model and `uname -r` — see [`libcrypt.so.1`](#libcrypt) below for
+one known newer-firmware issue already fixed.
+</details>
+
+<details>
+<summary><strong id="libcrypt">Newer firmware and `libcrypt.so.1`</strong></summary>
+
+Some newer Kindle firmware (confirmed on a 2024-era Paperwhite 6, kernel
+`5.15.x`) doesn't ship `libcrypt.so.1` anywhere on the device at all, which
+`dropbearmulti` needs for the `-Y` master-password flag's `crypt()` call —
+it fails to start with `error while loading shared libraries: libcrypt.so.1`.
+Same root cause as a
+[known KOReader issue](https://github.com/koreader/koreader/issues/14389)
+on the same device class.
+
+Fixed since `0.1.8`: the `bin_11thgenplus` build now bundles its own copy
+(extracted from a working Paperwhite 5, confirmed same `armhf` ELF
+architecture — not a random third-party binary), and the server is launched
+with `LD_LIBRARY_PATH` pointed at it. This is a no-op on devices that
+already have their own system-wide copy. If you're still hitting this error
+on a version `0.1.8` or later, open an issue.
 </details>
 
 <details>

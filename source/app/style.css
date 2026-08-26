@@ -85,6 +85,25 @@ table.stat-table td.stat-value {
     border-color: #888888;
 }
 
+.keepawake-row {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    font-size: 18px;
+}
+.keepawake-row input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+.keepawake-note {
+    font-size: 13px;
+    color: #666666;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
 .status-line {
     font-size: 14px;
     text-align: right;

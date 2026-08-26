@@ -100,7 +100,7 @@ APP_ID="com.akshay.dropbearssh"
 
 rm -rf "${TARGET_DIR}"
 cp -r "${SCRIPT_DIR}/app" "${TARGET_DIR}"
-chmod +x "${TARGET_DIR}/bridge_handler.sh"
+chmod +x "${TARGET_DIR}/bridge_handler.sh" "${TARGET_DIR}/keepawake_loop.sh"
 
 sqlite3 "$DB" <<EOF
 INSERT OR IGNORE INTO interfaces(interface) VALUES('application');

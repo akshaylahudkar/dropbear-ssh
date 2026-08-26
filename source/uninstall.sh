@@ -64,6 +64,18 @@ for PID in $(ps | grep '[n]c -lk' | awk '{print $1}'); do
     kill "${PID}" 2>/dev/null
 done
 
+# Sleep-deferral loop behind the app's keep-awake checkbox — an active
+# background process (unlike the Home-screen launcher file, which is
+# deliberately never touched here), so it does get cleaned up on a real
+# uninstall. Process-group kill since setsid made its own session/group
+# leader match this PID — a plain kill would only stop the outer shell,
+# leaving lipc-wait-event running until its next SIGPIPE.
+KEEPAWAKE_PIDFILE="${BASEDIR}/etc/keepawake.pid"
+if [ -f "${KEEPAWAKE_PIDFILE}" ]; then
+    kill -- -"$(cat "${KEEPAWAKE_PIDFILE}")" 2>/dev/null
+    rm -f "${KEEPAWAKE_PIDFILE}"
+fi
+
 # Mesquite status/toggle app install.sh registers — same appreg pattern as
 # sysmon/reading-stats' own uninstall.sh.
 DB="/var/local/appreg.db"
