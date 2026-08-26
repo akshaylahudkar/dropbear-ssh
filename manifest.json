@@ -10,6 +10,18 @@
       "description": "On-demand SSH/SFTP server (dropbear, repackaged from notmarek/kindle-usbnetlite) over your existing WiFi \u2014 no USB networking needed. Launching opens a status app with a Start/Stop button (talks to a small loopback-only HTTP bridge on-device, no external server) showing the connect command and password while running. A random password is generated on install and printed in the KPM log; set your own any time by editing /mnt/us/usbnetlite/etc/ssh_password and restarting the server. Verified working on Kindle PaperWhite 4 (kernel 4.1.x, 2018-2022-era hardware) and Kindle Paperwhite 5 (kernel 4.9.77). Ships a second binary build for newer/older devices per upstream's own release split, selected automatically by kernel version at install time \u2014 that second build is confirmed working on Paperwhite 5, but still unconfirmed on the rest of its device list (an earlier test on a different device crashed with Connection reset by peer during the SSH key exchange).",
       "artifacts": [
         {
+          "url": "packages/dropbear-ssh/artifacts/dropbear-ssh_0.1.7_kindlehf.kpkg",
+          "version": [
+            0,
+            1,
+            7
+          ],
+          "dependencies": [],
+          "supported_platforms": [
+            "kindlehf"
+          ]
+        },
+        {
           "url": "packages/dropbear-ssh/artifacts/dropbear-ssh_0.1.6_kindlehf.kpkg",
           "version": [
             0,

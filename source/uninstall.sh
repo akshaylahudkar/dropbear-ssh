@@ -74,10 +74,13 @@ DELETE FROM properties WHERE handlerId='$APP_ID';
 DELETE FROM handlerIds WHERE handlerId='$APP_ID';
 EOF
 
-# dropbear-ssh.sh — the repo's own install/launch scriptlet, whatever put
-# it there (USB copy, kterm, scp). Safe to remove unconditionally, it's
-# distributed as-is, nothing user-authored lives in it. The .sdr sidecar
-# (Kindle's per-book metadata dir) only appears once the device has
-# actually indexed the file, so it may not exist yet.
-rm -f "/mnt/us/documents/dropbear-ssh.sh"
-rm -rf "/mnt/us/documents/dropbear-ssh.sh.sdr"
+# Deliberately NOT touching /mnt/us/documents/dropbear-ssh.sh here. It used
+# to be safe to delete because install.sh regenerated it every time — now
+# it's the permanent, user-placed launcher (both installer and launcher in
+# one file), and kpm runs this uninstall.sh as part of every plain
+# `kpm install` too (logged as "Running uninstall hooks"), not just a real
+# uninstall. Deleting it here means the Home-screen icon would vanish after
+# the very first tap, on every future upgrade, forever — confirmed the hard
+# way on a real device. A genuine uninstall leaves the launcher in place,
+# same as nothing auto-removes kterm.sh; delete it manually via USB if you
+# want it gone too.
