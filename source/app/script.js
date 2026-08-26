@@ -146,47 +146,91 @@ function toggleKeepawake() {
     xhr.send();
 }
 
+var UPDATE_POLL_MAX = 20;       // 20 * 1.5s = 30s max wait for a result
+var UPDATE_POLL_INTERVAL = 1500;
+
+function updateBtnReset() {
+    var updateBtn = document.getElementById("update-btn");
+    updateBtn.textContent = "Check for Update";
+    updateBtn.disabled = !BRIDGE_URL;
+}
+
 function runUpdate() {
     if (!BRIDGE_URL) { return; }
     var updateBtn = document.getElementById("update-btn");
     updateBtn.disabled = true;
-    updateBtn.textContent = "Updating...";
-    setStatus("Update started...");
+    updateBtn.textContent = "Checking...";
+    setStatus("Checking for update...");
 
     var xhr = new XMLHttpRequest();
-    // /update: bridge_handler.sh kicks off the real install in a
-    // detached helper script and responds immediately (this route
-    // never waits for the install to finish — see that file for why),
-    // so this response only confirms the update started, not its
-    // result. There's no reliable "it's done" signal to wait for from
-    // here — reopening the app afterward is what shows the real result.
+    // /update only kicks off the real install in a detached helper
+    // script and responds immediately (see bridge_handler.sh for why:
+    // kpm install replaces the app's own files, including whichever
+    // script is still running at the time). This response just confirms
+    // it started — pollUpdateResult() below is what finds out what
+    // actually happened.
     xhr.open("GET", BRIDGE_URL + "update?t=" + Date.now(), true);
     xhr.timeout = 8000;
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) { return; }
-        updateBtn.textContent = "Check for Update";
         if (xhr.status === 200 || xhr.status === 0) {
-            var data;
-            try { data = JSON.parse(xhr.responseText); }
-            catch (e) { setStatus("Parse error"); updateBtn.disabled = false; return; }
-            renderUI(data);
-            setStatus("Update started — reopen the app in a few seconds to see the result");
+            pollUpdateResult(0);
         } else {
             setStatus("Update failed to start (" + xhr.status + ")");
-            updateBtn.disabled = false;
+            updateBtnReset();
         }
     };
-    xhr.ontimeout = function() {
-        updateBtn.textContent = "Check for Update";
-        setStatus("Update request timed out");
-        updateBtn.disabled = false;
+    xhr.ontimeout = function() { setStatus("Update request timed out"); updateBtnReset(); };
+    xhr.onerror   = function() { setStatus("Update request error"); updateBtnReset(); };
+    xhr.send();
+}
+
+function pollUpdateResult(attempt) {
+    // update_helper.sh writes update_result.json only once it's actually
+    // done (including the before/after version compare, so this can
+    // honestly distinguish "nothing changed" from "updated" — kpm
+    // install's own output can't, it always reports "upgrading" even for
+    // an identical version). Polled as a plain file:// fetch, same
+    // pattern as status.json's own fetch, not through the HTTP bridge.
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "update_result.json?t=" + Date.now(), true);
+    xhr.timeout = 5000;
+
+    var next = function() {
+        if (attempt < UPDATE_POLL_MAX) {
+            // Old webview here — no String.prototype.repeat, build the
+            // dots by hand instead.
+            var dots = "";
+            for (var i = 0; i <= (attempt % 3); i++) { dots += "."; }
+            setStatus("Updating" + dots);
+            setTimeout(function() { pollUpdateResult(attempt + 1); }, UPDATE_POLL_INTERVAL);
+        } else {
+            setStatus("Still working — reopen the app in a moment to check");
+            updateBtnReset();
+        }
     };
-    xhr.onerror = function() {
-        updateBtn.textContent = "Check for Update";
-        setStatus("Update request error");
-        updateBtn.disabled = false;
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) { return; }
+        var data = null;
+        if (xhr.status === 200 || xhr.status === 0) {
+            try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
+        }
+        if (data && data.done) {
+            renderUI(data);
+            if (data.updated) {
+                setStatus("Updated to v" + data.version + "!");
+            } else {
+                setStatus("Already up to date (v" + data.version + ")");
+            }
+            updateBtnReset();
+        } else {
+            next();
+        }
     };
+    xhr.ontimeout = next;
+    xhr.onerror = next; // the result file not existing yet also lands here for file:// XHR
     xhr.send();
 }
 

@@ -101,12 +101,15 @@ JSON
 # very script the shell is still mid-way through reading (same class of
 # bug fixed in 0.1.7 for dropbear-ssh.sh). Launching a separate,
 # disposable file via setsid and responding immediately sidesteps that
-# entirely — this response only confirms the update started, not that it
-# finished; reopen the app afterward to see the result and, if the
-# server was running, tap Start Server if update_helper.sh's own restart
-# didn't already show it running again.
+# entirely — this response only confirms the update started, not its
+# result. The frontend polls update_result.json (written by
+# update_helper.sh itself once it's actually done) for the real
+# outcome, so any stale one from a previous update needs clearing here
+# first — otherwise a fresh poll could read yesterday's leftover result
+# before the new one lands.
 case "${REQUEST_LINE}" in
     *"/update"*)
+        rm -f "${TARGET_DIR}/update_result.json"
         setsid sh "${TARGET_DIR}/update_helper.sh" </dev/null >/dev/null 2>&1 &
 
         RUNNING="false"

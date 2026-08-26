@@ -72,10 +72,11 @@ already done that once.
 
 Or skip `kterm` entirely — the app itself has a **Check for Update**
 button that does the same thing, restarting the server afterward if it
-was running. Its response only confirms the update started, not that it
-finished (the actual install runs in the background so it can safely
-overwrite the app's own files) — reopen the app after a few seconds to
-see the result.
+was running. The actual install runs in the background (so it can safely
+overwrite the app's own files without corrupting whatever's mid-run) —
+the app polls for the real result and shows either "Already up to date"
+or "Updated to vX.Y.Z", honestly, rather than assuming an update
+happened just because the button was tapped.
 
 (`https://nealing.net/manifest.json` also has
 [sysmon](https://github.com/akshaylahudkar/sysmon) — the old
