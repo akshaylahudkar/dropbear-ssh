@@ -31,6 +31,8 @@ PKG_MANIFEST="/mnt/us/kmc/kpm/packages/${PKG_ID}/manifest.json"
 TARGET_DIR="/var/local/mesquite/dropbear-ssh"
 RESULT_FILE="${TARGET_DIR}/update_result.json"
 KEEPAWAKE_PIDFILE="${BASEDIR}/etc/keepawake.pid"
+BRIDGE_PORT="18022"
+BRIDGE_PIDFILE="${BASEDIR}/etc/bridge.pid"
 
 get_version() {
     grep -A4 '"version"' "${PKG_MANIFEST}" 2>/dev/null | grep -oE '[0-9]+' | tr '\n' '.' | sed 's/\.$//'
@@ -48,6 +50,7 @@ WAS_RUNNING="false"
 if [ -f "${PIDFILE}" ] && [ -d "/proc/$(cat "${PIDFILE}" 2>/dev/null)" ]; then
     WAS_RUNNING="true"
 fi
+WAS_KEEPAWAKE="$(keepawake_state)"
 
 BEFORE_VERSION=$(get_version)
 
@@ -65,6 +68,30 @@ AFTER_VERSION=$(get_version)
 # signal.
 UPDATED="false"
 [ "${AFTER_VERSION}" != "${BEFORE_VERSION}" ] && UPDATED="true"
+
+# uninstall.sh (which kpm install always runs first, even for a same-
+# version reinstall) unconditionally kills every `nc -lk` process on
+# the device, including the bridge listener this whole app talks
+# through — not tied to whether dropbear itself was running, so this
+# always needs restarting after any install, not just conditionally.
+# Confirmed the hard way: without this, every single tap of Check for
+# Update killed the bridge and silently broke every other button in the
+# app until the Home-screen icon was retapped. Same pattern as
+# launch.sh's own bridge-start check.
+if ! { [ -f "${BRIDGE_PIDFILE}" ] && [ -d "/proc/$(cat "${BRIDGE_PIDFILE}" 2>/dev/null)" ]; }; then
+    nohup nc -lk -p "${BRIDGE_PORT}" -e "${TARGET_DIR}/bridge_handler.sh" \
+        </dev/null >"${BASEDIR}/bridge.log" 2>&1 &
+    echo $! > "${BRIDGE_PIDFILE}"
+fi
+
+# uninstall.sh kills the keep-awake loop too, same reasoning as the
+# bridge above — restart it if it was on before, same setsid invocation
+# bridge_handler.sh's own /keepawake route uses to turn it on.
+if [ "${WAS_KEEPAWAKE}" = "true" ]; then
+    rm -f "${KEEPAWAKE_PIDFILE}"
+    setsid sh "${TARGET_DIR}/keepawake_loop.sh" </dev/null >/dev/null 2>&1 &
+    echo $! > "${KEEPAWAKE_PIDFILE}"
+fi
 
 # Restart if it was running — deliberately a small separate copy of
 # bridge_handler.sh's start_dropbear(), not a call into it: that file
