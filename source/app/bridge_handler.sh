@@ -212,6 +212,15 @@ if [ -f "${PIDFILE}" ] && [ -d "/proc/$(cat "${PIDFILE}" 2>/dev/null)" ]; then
     kill "$(cat "${PIDFILE}")" 2>/dev/null
     rm -f "${PIDFILE}"
     iptables -D INPUT -p tcp --dport "${PORT}" -j ACCEPT >/dev/null 2>&1
+    # Keep-awake exists purely to keep this server reachable through
+    # sleep — pointless (pure battery cost, zero benefit) once the
+    # server itself is stopped, so stopping the server turns it off
+    # too. Same process-group kill as the /keepawake route's own
+    # turn-off branch.
+    if [ "$(keepawake_state)" = "true" ]; then
+        kill -- -"$(cat "${KEEPAWAKE_PIDFILE}")" 2>/dev/null
+        rm -f "${KEEPAWAKE_PIDFILE}"
+    fi
     respond false ""
     exit 0
 fi
