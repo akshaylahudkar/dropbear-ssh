@@ -81,6 +81,7 @@ function renderUI(data) {
     keepawakeCheck.disabled = !BRIDGE_URL;
 
     document.getElementById("update-btn").disabled = !BRIDGE_URL;
+    document.getElementById("set-password-btn").disabled = !BRIDGE_URL;
 
     setStatus("Updated " + data.time);
 }
@@ -234,6 +235,43 @@ function pollUpdateResult(attempt) {
     xhr.send();
 }
 
+function setPassword() {
+    if (!BRIDGE_URL) { return; }
+    var input = document.getElementById("new-password-input");
+    var btn = document.getElementById("set-password-btn");
+    var pw = input.value;
+    if (!pw) { setStatus("Enter a password first"); return; }
+
+    btn.disabled = true;
+    setStatus("Setting password...");
+
+    var xhr = new XMLHttpRequest();
+    // encodeURIComponent on the way out, matched by bridge_handler.sh's
+    // own url-decode on the way in — this is the one action here that
+    // sends real user input across the bridge, everything else so far
+    // has just been a bare toggle.
+    xhr.open("GET", BRIDGE_URL + "setpassword?pw=" + encodeURIComponent(pw) + "&t=" + Date.now(), true);
+    xhr.timeout = 8000;
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) { return; }
+        if (xhr.status === 200 || xhr.status === 0) {
+            var data;
+            try { data = JSON.parse(xhr.responseText); }
+            catch (e) { setStatus("Parse error"); btn.disabled = !BRIDGE_URL; return; }
+            input.value = "";
+            renderUI(data);
+            setStatus(data.running ? "Password updated, server restarted" : "Password updated");
+        } else {
+            setStatus("Set password failed (" + xhr.status + ")");
+            btn.disabled = !BRIDGE_URL;
+        }
+    };
+    xhr.ontimeout = function() { setStatus("Set password timed out"); btn.disabled = !BRIDGE_URL; };
+    xhr.onerror   = function() { setStatus("Set password error"); btn.disabled = !BRIDGE_URL; };
+    xhr.send();
+}
+
 function setStatus(msg) {
     document.getElementById("status-line").innerHTML = msg;
 }
@@ -242,5 +280,21 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("toggle-btn").addEventListener("click", toggleServer);
     document.getElementById("keepawake-check").addEventListener("change", toggleKeepawake);
     document.getElementById("update-btn").addEventListener("click", runUpdate);
+    document.getElementById("set-password-btn").addEventListener("click", setPassword);
+
+    // Native <label for="..."> click-through to the checkbox isn't
+    // reliable in this webview (confirmed the checkbox itself was too
+    // small a target to hit reliably even with the label wrapping it),
+    // so the whole row is wired to toggle it directly too — guarded so
+    // a tap that already landed on the checkbox itself doesn't fire this
+    // a second time and double-toggle.
+    document.querySelector(".keepawake-row").addEventListener("click", function(e) {
+        if (e.target && e.target.id === "keepawake-check") { return; }
+        var check = document.getElementById("keepawake-check");
+        if (check.disabled) { return; }
+        check.checked = !check.checked;
+        toggleKeepawake();
+    });
+
     fetchStatus();
 });

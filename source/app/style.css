@@ -89,12 +89,13 @@ table.stat-table td.stat-value {
     display: flex;
     align-items: center;
     margin-top: 20px;
+    padding: 8px 0;
     font-size: 18px;
 }
 .keepawake-row input[type="checkbox"] {
-    width: 24px;
-    height: 24px;
-    margin-right: 10px;
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
     flex-shrink: 0;
 }
 .keepawake-note {
@@ -117,6 +118,17 @@ table.stat-table td.stat-value {
 .update-btn:disabled {
     color: #888888;
     border-color: #888888;
+}
+
+.password-input {
+    display: block;
+    width: 100%;
+    font-size: 18px;
+    padding: 10px 8px;
+    margin-top: 8px;
+    border: 2px solid #000000;
+    background: #ffffff;
+    color: #000000;
 }
 
 .status-line {

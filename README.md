@@ -124,10 +124,13 @@ server itself.
   it on via USB the same way you'd sideload a book, or from `kterm`:
   `echo "yourpassword" > /mnt/us/dropbear_password.txt`. The installer uses
   it and deletes the staging file.
-- **Change it later**: edit `/mnt/us/usbnetlite/etc/ssh_password`, then use
-  the app's Stop/Start button to restart the server (a running server has
-  already loaded the old password into memory, so editing the file alone
-  won't take effect until it restarts).
+- **Change it later**: the app has a **Set Password** field and button —
+  type a new one and tap it; if the server's running, it restarts
+  automatically so the change takes effect immediately. Or edit
+  `/mnt/us/usbnetlite/etc/ssh_password` by hand and use the Stop/Start
+  button yourself (a running server has already loaded the old password
+  into memory, so editing the file alone won't take effect until it
+  restarts).
 - **Back to random**: delete that file instead of editing it — the next
   launch generates a fresh one automatically.
 

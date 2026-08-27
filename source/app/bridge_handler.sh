@@ -7,13 +7,13 @@
 # print on success is silenced accordingly; only respond() and the
 # inline /update response write to stdout.
 #
-# Three actions now, routed by request path: the request line (e.g.
+# Four actions now, routed by request path: the request line (e.g.
 # "GET /keepawake?t=... HTTP/1.1") is read once at the top and matched
-# against "/keepawake" and "/update" — anything else (including the
-# original bare "/" the server toggle has always used) falls through to
-# that original behavior. Confirmed working end-to-end: the mesquite
-# webview's XHR can reach 127.0.0.1 despite the page being loaded from
-# file://, no CORS headaches needed.
+# against "/update", "/setpassword", and "/keepawake" — anything else
+# (including the original bare "/" the server toggle has always used)
+# falls through to that original behavior. Confirmed working end-to-end:
+# the mesquite webview's XHR can reach 127.0.0.1 despite the page being
+# loaded from file://, no CORS headaches needed.
 BASEDIR="/mnt/us/usbnetlite"
 BINDIR="${BASEDIR}/bin"
 PASSFILE="${BASEDIR}/etc/ssh_password"
@@ -124,6 +124,51 @@ JSON
 )
         LEN=$(printf '%s' "${BODY}" | wc -c | tr -d ' ')
         printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' "${LEN}" "${BODY}"
+        exit 0
+        ;;
+esac
+
+# ── /setpassword?pw=<urlencoded>: write a new password and, if the
+# server is currently running, restart it so the new password actually
+# takes effect (a running dropbear has already loaded the old one into
+# memory — same caveat the README documents for editing the file by
+# hand). The one action here that carries real user input across the
+# bridge rather than just toggling something; pw is pulled out of the
+# request line and percent-decoded by hand (sed can undo
+# encodeURIComponent's escaping — no proper URL-parsing tool available
+# in this shell).
+case "${REQUEST_LINE}" in
+    *"/setpassword"*)
+        RAW_PW=$(printf '%s' "${REQUEST_LINE}" | sed -n 's/.*[?&]pw=\([^& ]*\).*/\1/p')
+        NEW_PW=$(printf '%b' "$(printf '%s' "${RAW_PW}" | sed 's/+/ /g; s/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')")
+
+        if [ -n "${NEW_PW}" ]; then
+            mkdir -p "${BASEDIR}/etc"
+            printf '%s' "${NEW_PW}" > "${PASSFILE}"
+        fi
+
+        RUNNING="false"
+        KINDLE_IP=""
+        if [ -f "${PIDFILE}" ] && [ -d "/proc/$(cat "${PIDFILE}" 2>/dev/null)" ]; then
+            OLD_PID=$(cat "${PIDFILE}" 2>/dev/null)
+            kill "${OLD_PID}" 2>/dev/null
+            rm -f "${PIDFILE}"
+            # Same wait-for-actual-death pattern uninstall.sh uses —
+            # kill only sends the signal, doesn't wait for the port to
+            # actually free up; confirmed hittable without this (a
+            # restart landing before the old process released 0.0.0.0:
+            # ${PORT} would fail to bind at all).
+            WAITED=0
+            while [ -d "/proc/${OLD_PID}" ] && [ "${WAITED}" -lt 3 ]; do
+                sleep 1
+                WAITED=$((WAITED + 1))
+            done
+            start_dropbear
+            RUNNING="true"
+            KINDLE_IP=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
+        fi
+
+        respond "${RUNNING}" "${KINDLE_IP}"
         exit 0
         ;;
 esac
