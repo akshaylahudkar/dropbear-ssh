@@ -219,13 +219,27 @@ function pollUpdateResult(attempt) {
             try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
         }
         if (data && data.done) {
-            renderUI(data);
             if (data.updated) {
-                setStatus("Updated to v" + data.version + "!");
+                // A real version change may have altered index.html/
+                // script.js/style.css themselves (new buttons, fields,
+                // etc.) -- renderUI() alone only updates data inside the
+                // page that's already loaded, it can't retroactively add
+                // HTML that didn't exist when this page was parsed.
+                // Confirmed the hard way: a real update landed fine, but
+                // a brand new UI section just never appeared until the
+                // app was manually reopened. A real reload re-fetches
+                // the actual files, so it can't miss this on any future
+                // update, structural or not. Held long enough to
+                // actually read the message first, and skipped entirely
+                // on "already up to date" (below) since nothing to
+                // reload for.
+                setStatus("Updated to v" + data.version + "! Reloading...");
+                setTimeout(function() { location.reload(); }, 1800);
             } else {
+                renderUI(data);
                 setStatus("Already up to date (v" + data.version + ")");
+                updateBtnReset();
             }
-            updateBtnReset();
         } else {
             next();
         }
