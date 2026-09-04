@@ -1,45 +1,60 @@
 # dropbear-ssh
 
-On-demand SSH/SFTP access to a jailbroken Kindle over its existing WiFi
-connection — a [KPM](https://github.com/KindleModding/KPM) package, nothing
-to build, no USB cable required once it's installed.
+SSH and SFTP access to a jailbroken Kindle over WiFi, started and stopped
+from an on-device app. Packaged for [KPM](https://github.com/KindleModding/KPM),
+so there is nothing to build and no USB cable needed after install.
+
+```
+ssh -p 2022 root@<kindle-ip>
+```
+
+## Requirements
+
+A jailbroken Kindle with KPM. Modern jailbreaks ship KPM pre-installed; check
+for `/var/local/kmc/bin/kpm` if you are unsure, or just try the install below
+and see whether it works.
+
+| Device | Kernel | Binary build | Status |
+| --- | --- | --- | --- |
+| Paperwhite 4 | `4.1.x` | `bin_khf` | Tested end to end |
+| Paperwhite 5 | `4.9.77` | `bin_11thgenplus` | Tested end to end |
+| Paperwhite 6 (Véra) | `5.15.41` | `bin_11thgenplus` | Tested end to end |
+| Basic 3/4, Oasis 3, Scribe | `4.1.x` | `bin_khf` | Untested, same build |
+| Touch through Scribe 2 / ColorSoft | other | `bin_11thgenplus` | Untested, same build |
+
+The package ships both binary builds and picks one by kernel version at
+install time. If yours is not on this list, install it anyway and
+[open an issue](../../issues) with your device model and `uname -r` if it
+fails.
 
 ## Install
 
-Requires KPM (modern jailbreaks ship with it pre-installed). Two ways to
-install:
+### Option A — USB, no terminal
 
-**Option A — USB, no terminal needed (recommended for a first install):**
-
-1. Download [`dropbear-ssh.sh`](dropbear-ssh.sh) from this repo.
-2. Copy it onto the Kindle via USB, into the `documents` folder — same
+1. Download [`dropbear-ssh.sh`](dropbear-ssh.sh).
+2. Copy it into the Kindle's `documents` folder over USB, the same
    drag-and-drop as sideloading a book.
-3. Eject, then tap **Dropbear SSH** on the Home screen/Library. If it
-   doesn't show up immediately, reboot the Kindle — the file's there but
-   the Home screen's content index doesn't always pick it up until the next
-   rescan.
+3. Eject, then tap **Dropbear SSH** in the Library. Reboot if it does not
+   appear; the Home screen index does not always pick up new files right away.
 
-This one file is both the installer and the permanent launcher — the
-first tap installs and launches; every tap after that just launches,
-without touching the install at all (confirmed the hard way: `kpm
-install` restarts the running server on *every* call, even when nothing
-changed, so reopening used to kill it every time — fixed by only
-installing on that genuinely first tap). There's nothing else to copy
-over later, and no separate entry gets added — this stays the one icon
-for this package. One trade-off: since it only installs once, reopening
-no longer auto-updates to a newer version — grab a fresh copy of this
-file (or use Option B) to actually upgrade.
+That one file is both the installer and the permanent launcher. The first tap
+installs and launches, every tap after that only launches. Nothing else needs
+to be copied over later.
 
-**Option B — `kterm` or any terminal over SSH**, useful if you already have
-SSH access another way, or want to see real output instead of a silent tap.
-If you don't have `kterm` yet, install it from the search bar first (no
-`add-repo` needed — it's on KPM's official default repo):
+Because it installs only once, tapping the icon will not pull in a newer
+version. See [Updating](#updating).
+
+### Option B — from a terminal
+
+Useful if you already have shell access, or want to see install output instead
+of a silent tap. Install `kterm` from the search bar first if you do not have
+it:
 
 ```text
 ;kpm install kterm
 ```
 
-Then open **Kterm** from the Home screen/Library and run:
+Open **Kterm** and run:
 
 ```text
 KPM=/var/local/kmc/bin/kpm
@@ -48,212 +63,118 @@ $KPM install dropbear-ssh
 $KPM launch dropbear-ssh
 ```
 
-(KPM's own installer never puts `kpm` on `PATH`, so the full path is
-required here.)
+KPM's installer does not put `kpm` on `PATH`, hence the full path. This adds
+the same Library icon as Option A, so later launches do not need `kterm`.
 
-This also adds the same Home-screen icon as Option A, if one doesn't
-already exist — so future launches don't need `kterm` at all unless you
-want it.
+## Using it
 
-## Updating to a new version
+Launching opens a status app with:
 
-Tapping the Home-screen icon only installs once (see above for why) — to
-actually pick up a newer version later, run the install line from Option B
-in `kterm` again:
+- **Start Server** / **Stop Server**. While running, the screen shows the
+  connect command with the Kindle's real IP and the current password.
+- **Set Password**. Restarts the server if it is running.
+- **Check for Update**.
+- **Keep reachable while Kindle sleeps**.
+
+The server keeps running after you close the app. The buttons talk to a small
+HTTP bridge on the device (`nc` plus a shell handler) bound to
+`127.0.0.1:18022`, so nothing is exposed beyond loopback.
+
+### Keep reachable while Kindle sleeps
+
+A Kindle suspends WiFi when the screen sleeps. The server process survives,
+but nothing can reach it until the device wakes. This checkbox defers the
+suspend cycle for as long as it is on.
+
+It costs battery, since the radio and CPU stay up instead of suspending. The
+e-ink screen itself draws power only while redrawing, so it is not a factor
+either way. Stopping the server also turns this off.
+
+## Updating
+
+The app's **Check for Update** button installs whatever is currently latest and
+reports either "Already up to date" or "Updated to vX.Y.Z" based on the
+installed version before and after, not on the button having been tapped. It
+restarts the server if it was running and reloads the app page.
+
+The equivalent from `kterm`:
 
 ```text
 KPM=/var/local/kmc/bin/kpm
 $KPM install dropbear-ssh
 ```
 
-That always hits the network and installs whatever's currently latest,
-regardless of what's already there — no need to re-add the repo if you've
-already done that once.
-
-Or skip `kterm` entirely — the app itself has a **Check for Update**
-button that does the same thing, restarting the server afterward if it
-was running. The actual install runs in the background (so it can safely
-overwrite the app's own files without corrupting whatever's mid-run) —
-the app polls for the real result and shows either "Already up to date"
-or "Updated to vX.Y.Z", honestly, rather than assuming an update
-happened just because the button was tapped.
-
-(`https://nealing.net/manifest.json` also has
-[sysmon](https://github.com/akshaylahudkar/sysmon) — the old
-`dropbear.nealing.net/manifest.json` URL still works too, it just redirects
-here now.)
-
-Launching (the `dropbear-ssh.sh` scriptlet or the kterm command) opens a
-small status app showing whether the server is currently running, plus a
-**Start Server** / **Stop Server** button — tap it to toggle. When running,
-the screen shows your connect command with the Kindle's real IP and the
-current password:
-
-```
-ssh -p 2022 root@<kindle-ip>
-```
-
-The button updates the same screen immediately, no need to relaunch —
-it's backed by a small on-device HTTP bridge (`nc` + a shell handler
-listening on loopback only, port `18022`) that the app's own button talks
-to; nothing is exposed beyond `127.0.0.1`.
-
-## Keeping it reachable while the Kindle sleeps
-
-By default, a Kindle suspends WiFi when its screen sleeps — the server
-process itself stays alive, but nothing can reach it until the device
-wakes up again. The app has a **Keep reachable while Kindle sleeps**
-checkbox that defers the device's own suspend cycle for as long as it's
-on, so the connection keeps working through what would otherwise be sleep.
-
-This costs more battery — WiFi and the CPU stay active instead of
-suspending, which is the entire reason a Kindle suspends them on sleep in
-the first place. The screen itself costs nothing either way (e-ink only
-draws power while actively redrawing, not while holding a static image),
-so this isn't about the screen — only about the radio and CPU staying up.
-Turn it off when you don't need remote access, same as you'd turn off the
-server itself.
+This always hits the network, and does not need the repo re-added.
 
 ## Password
 
-- **Default**: random, printed in the install log, always readable
-  afterward at `/mnt/us/usbnetlite/etc/ssh_password` (via USB or `kterm`)
-  even if you missed it on screen.
-- **Pick your own before installing**: save a plain text file named
-  `dropbear_password.txt` at the root of the Kindle's drive — drag-and-drop
-  it on via USB the same way you'd sideload a book, or from `kterm`:
-  `echo "yourpassword" > /mnt/us/dropbear_password.txt`. The installer uses
-  it and deletes the staging file.
-- **Change it later**: the app has a **Set Password** field and button —
-  type a new one and tap it; if the server's running, it restarts
-  automatically so the change takes effect immediately. Or edit
-  `/mnt/us/usbnetlite/etc/ssh_password` by hand and use the Stop/Start
-  button yourself (a running server has already loaded the old password
-  into memory, so editing the file alone won't take effect until it
-  restarts).
-- **Back to random**: delete that file instead of editing it — the next
-  launch generates a fresh one automatically.
+Auth is dropbear's compiled-in master password, stored in plain text at
+`/mnt/us/usbnetlite/etc/ssh_password` and readable over USB or from `kterm`.
 
-<details>
-<summary><strong id="install-details">Install details</strong></summary>
+- **Default**: random, generated at install and printed in the KPM log.
+- **Choose your own before installing**: put a plain text file named
+  `dropbear_password.txt` at the root of the Kindle drive. The installer reads
+  it and deletes it.
+- **Change it later**: use the app's **Set Password** field, or edit the
+  password file and restart the server. A running server has the old password
+  in memory, so editing the file alone changes nothing until it restarts.
+- **Back to random**: delete the password file; the next launch generates a
+  new one.
 
-- **KPM itself**: modern jailbreaks ship with it pre-installed — check for
-  `/var/local/kmc/bin/kpm` via kterm, or just try Option A above and see if
-  it works. If you're on an older jailbreak without it, see the
-  [KPM project](https://github.com/KindleModding/KPM) for current install
-  instructions (not duplicated here since they're liable to change).
-- **What `nealing.net` is**: a Cloudflare Worker that transparently proxies
-  this author's repos' `manifest.json`/`.kpkg` files straight from GitHub —
-  shorter to type than the raw GitHub URL, and (confirmed on real hardware)
-  it also routes around cases where a Kindle's network can reach Cloudflare
-  but not GitHub's raw-content CDN directly. The full URL,
-  `https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json`,
-  still works too if you'd rather see exactly where you're pointing before
-  typing a domain you don't recognize.
-- **Official KPM repo**: working on getting this added there too, so
-  eventually `kpm install dropbear-ssh` will work with no `add-repo` step
-  at all — not there yet.
-</details>
+## Security
 
-<details>
-<summary><strong>Why not just use upstream's own installer?</strong></summary>
+- The server binds to the WiFi interface, so it is reachable by anything on
+  the same network but not from the internet unless you have forwarded a port.
+- Stock firmware's `iptables` INPUT chain default-drops inbound connections.
+  Starting the server re-opens port 2022 in runtime kernel state, not
+  persisted across reboots.
+- The master password gets a root shell. There are no user accounts. Treat it
+  like the root password it is.
+- The loopback bridge has no auth of its own, so any local process can toggle
+  the server or read the password back. This matches the device's existing
+  trust model, `lipc` included, but is worth knowing.
+- [`source/`](source/) contains the exact scripts and binaries bundled in the
+  `.kpkg`, worth reading before installing anything that grants root over SSH.
 
-Two reasons:
+## Troubleshooting
 
-1. **It doesn't actually work on a modern jailbreak out of the box.**
-   Upstream's install method is the classic `;...mrpi` search-bar command,
-   handled on current jailbreaks by `dispatch.sh` — which looks for a
-   separate, no-longer-bundled extension at
-   `/mnt/us/extensions/MRInstaller/bin/mrinstaller.sh`. Missing that file
-   (confirmed missing on a modern KPM-based jailbreak), the command just
-   flashes **"MRPI is not installed."** and does nothing. Modern jailbreaks
-   ship KPM as the actual homebrew mechanism instead.
-2. Even setting that aside, the OTA installer writes to rootfs (symlinks in
-   `/usr/bin`, upstart jobs in `/etc/upstart`) and sets up USB-tethered
-   networking most people with a Kindle already on WiFi don't need — neither
-   of which a KPM hook package is allowed or needs to do.
-</details>
+**`error while loading shared libraries: libcrypt.so.1`** — some 2024-era
+firmware does not ship `libcrypt.so.1` at all, which `dropbearmulti` needs for
+the master-password `crypt()` call. Same root cause as a
+[known KOReader issue](https://github.com/koreader/koreader/issues/14389).
+Fixed since `0.1.8`, which bundles a copy in `bin_11thgenplus` and points
+`LD_LIBRARY_PATH` at it. Report it if you still hit this on `0.1.8` or later.
 
-<details>
-<summary><strong>What's verified, what isn't</strong></summary>
+**The upstream `;...mrpi` installer does not work here.** On current
+jailbreaks that command is handled by `dispatch.sh`, which looks for a
+no-longer-bundled `/mnt/us/extensions/MRInstaller/bin/mrinstaller.sh` and just
+flashes "MRPI is not installed." Upstream's OTA installer also writes to
+rootfs and sets up USB-tethered networking, neither of which a KPM hook
+package does or needs.
 
-Tested end-to-end (install via both the USB scriptlet and `kterm` → launch
-→ real SSH session → survives an upgrade/downgrade/reinstall) on a
-**Kindle PaperWhite 4, kernel `4.1.x`** (2018–2022-era hardware — Basic3,
-Oasis3, Basic4, and Scribe also ship this kernel per upstream's own release
-device list; **Paperwhite 5 does not** — see below, despite being on the
-same upstream device list).
+## About the repo URL
 
-The package also bundles a second binary build (`bin_11thgenplus`) covering
-upstream's broader device list — 2011-era Kindle Touch through 2024
-PaperWhite 6 / Scribe 2 / ColorSoft — auto-selected by kernel version at
-install time (`4.1.x` → the tested build; anything else → this one).
+`https://nealing.net/manifest.json` is a Cloudflare Worker that proxies this
+author's KPM manifests and `.kpkg` files from GitHub. It is shorter to type,
+and it reaches devices whose network can talk to Cloudflare but not to
+GitHub's raw-content CDN. It also serves
+[sysmon](https://github.com/akshaylahudkar/sysmon). The older
+`dropbear.nealing.net/manifest.json` redirects here.
 
-That second build is now **confirmed working end-to-end** (install → launch
-→ real SSH session) on a **Kindle Paperwhite 5, kernel `4.9.77`** and a
-**Kindle Paperwhite 6 (Véra jailbreak), kernel `5.15.41`** — the earlier
-crash reported on a different, unspecified device in this same kernel
-branch (`Connection reset by peer` during the SSH key exchange) turned out
-to be a separate issue, not something specific to that device. If it
-doesn't work for you outside the `4.1.x` family, open an issue with your
-device model and `uname -r` — see [`libcrypt.so.1`](#libcrypt) below for
-one known newer-firmware issue already fixed.
-</details>
+If you would rather point at GitHub directly:
 
-<details>
-<summary><strong id="libcrypt">Newer firmware and `libcrypt.so.1`</strong></summary>
+```text
+https://raw.githubusercontent.com/akshaylahudkar/dropbear-ssh/main/manifest.json
+```
 
-Some newer Kindle firmware (confirmed on a 2024-era Paperwhite 6, kernel
-`5.15.x`) doesn't ship `libcrypt.so.1` anywhere on the device at all, which
-`dropbearmulti` needs for the `-Y` master-password flag's `crypt()` call —
-it fails to start with `error while loading shared libraries: libcrypt.so.1`.
-Same root cause as a
-[known KOReader issue](https://github.com/koreader/koreader/issues/14389)
-on the same device class.
+## Credit
 
-Fixed since `0.1.8`: the `bin_11thgenplus` build now bundles its own copy
-(extracted from a working Paperwhite 5, confirmed same `armhf` ELF
-architecture — not a random third-party binary), and the server is launched
-with `LD_LIBRARY_PATH` pointed at it. This is a no-op on devices that
-already have their own system-wide copy. If you're still hitting this error
-on a version `0.1.8` or later, open an issue.
-</details>
-
-<details>
-<summary><strong>Security notes</strong></summary>
-
-- The server only binds to the Kindle's WiFi interface — reachable by
-  anything on the same network, not the internet, unless you've separately
-  set up port forwarding.
-- Stock firmware's `iptables` INPUT chain default-drops inbound connections;
-  `bridge_handler.sh` re-opens the port each time the server is started via
-  the button (runtime kernel state, not persisted).
-- Auth is dropbear's compiled-in master-password mechanism, not real user
-  accounts — anyone with the password gets a root shell. Treat it like the
-  root password it is.
-- The Start/Stop button talks to a small HTTP bridge (`nc` + a shell script)
-  bound to `127.0.0.1:18022` only — not reachable from the network, only
-  from processes running on the device itself. It has no auth of its own
-  (anything local can toggle the server or read the password back), which
-  is in line with this device's existing trust model — `lipc` itself is
-  the same way — but worth knowing if you're thinking about the threat
-  model closely.
-- `source/` in this repo has the exact `install.sh`/`launch.sh`/
-  `bridge_handler.sh`/`uninstall.sh` and binaries bundled in the `.kpkg` —
-  worth a read before installing anything that gets you root over SSH.
-</details>
-
-<details>
-<summary><strong>Credit / origin</strong></summary>
-
-Repackages the `dropbearmulti`/`sftp-server` binaries from
-[notmarek/kindle-usbnetlite](https://github.com/notmarek/kindle-usbnetlite)
-as a KPM hook package. `bin_khf/` and `bin_11thgenplus/` are unmodified,
-extracted from that project's own signed releases via `kindletool extract`
-— not built from source here. All credit for the SSH server itself and the
-Kindle-specific patches (`dropbear_be_cool.patch`, which the hardcoded paths
-this package relies on come from) goes to
+The `dropbearmulti` and `sftp-server` binaries come from
+[notmarek/kindle-usbnetlite](https://github.com/notmarek/kindle-usbnetlite),
+extracted unmodified from that project's signed releases with `kindletool
+extract` rather than built here. Credit for the SSH server and the
+Kindle-specific patches, including `dropbear_be_cool.patch` and the hardcoded
+paths this package depends on, goes to
 [notmarek](https://github.com/notmarek) and the kindle-usbnetlite
 contributors, and to [Dropbear SSH](https://matt.ucc.asn.au/dropbear/dropbear.html)
 by Matt Johnston underneath that.
-</details>
