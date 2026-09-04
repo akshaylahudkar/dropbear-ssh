@@ -34,9 +34,8 @@ if ! { [ -f "${BRIDGE_PIDFILE}" ] && [ -d "/proc/$(cat "${BRIDGE_PIDFILE}" 2>/de
     # own invocation below: this is a long-running background process, so
     # without it, it inherits stdin from whatever launched this script —
     # harmless from an interactive kterm shell, but confirmed the hard
-    # way that `kpm launch` (via the Library scriptlet or the search bar)
-    # hangs waiting for that pipe's EOF, which a forever-running listener
-    # never provides.
+    # way that `kpm launch` from the Library scriptlet hangs waiting for
+    # that pipe's EOF, which a forever-running listener never provides.
     nohup nc -lk -p "${BRIDGE_PORT}" -e "${TARGET_DIR}/bridge_handler.sh" \
         </dev/null >"${BASEDIR}/bridge.log" 2>&1 &
     echo $! > "${BRIDGE_PIDFILE}"

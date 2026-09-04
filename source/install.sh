@@ -144,9 +144,9 @@ fi
 
 echo "Installed. Launch with: kpm launch dropbear-ssh"
 echo "Password: $(cat "${PASSFILE}")"
-echo "(If installing from the search bar, this output may flash and vanish"
-echo "before you can read it — the password is always saved in plain text at"
-echo "${PASSFILE}, readable via USB or kterm regardless of how install ran.)"
+echo "(A Library tap shows none of this output — the password is always saved"
+echo "in plain text at ${PASSFILE}, readable via USB or"
+echo "kterm regardless of how the install ran. The app displays it too.)"
 echo "To set your own: edit ${PASSFILE} (plain text, one line), then kill any"
 echo "running dropbearmulti dropbear process and 'kpm launch dropbear-ssh'"
 echo "again — a running server has already loaded the old password into"

@@ -4,10 +4,6 @@ SSH and SFTP access to a jailbroken Kindle over WiFi, started and stopped
 from an on-device app. Packaged for [KPM](https://github.com/KindleModding/KPM),
 so there is nothing to build and no USB cable needed after install.
 
-```
-ssh -p 2022 root@<kindle-ip>
-```
-
 ## Requirements
 
 A jailbroken Kindle with KPM. Modern jailbreaks ship KPM pre-installed; check
@@ -44,17 +40,13 @@ to be copied over later.
 Because it installs only once, tapping the icon will not pull in a newer
 version. See [Updating](#updating).
 
-### Option B — from a terminal
+### Option B — from a terminal on the Kindle
 
-Useful if you already have shell access, or want to see install output instead
-of a silent tap. Install `kterm` from the search bar first if you do not have
-it:
+Requires `kterm`, or any other shell, already on the device. If you do not have
+one, use Option A, which needs no terminal at all.
 
-```text
-;kpm install kterm
-```
-
-Open **Kterm** and run:
+Useful if you want to see the install output instead of a silent tap. These
+commands run on the Kindle itself:
 
 ```text
 KPM=/var/local/kmc/bin/kpm
@@ -70,11 +62,20 @@ the same Library icon as Option A, so later launches do not need `kterm`.
 
 Launching opens a status app with:
 
-- **Start Server** / **Stop Server**. While running, the screen shows the
-  connect command with the Kindle's real IP and the current password.
-- **Set Password**. Restarts the server if it is running.
-- **Check for Update**.
-- **Keep reachable while Kindle sleeps**.
+- **Start Server** / **Stop Server**
+- **Set Password**, which restarts the server if it is running
+- **Check for Update**
+- **Keep reachable while Kindle sleeps**
+
+While the server is running, the app shows the Kindle's current IP address and
+password. Connect from any computer on the same network:
+
+```console
+$ ssh -p 2022 root@<kindle-ip>
+$ sftp -P 2022 root@<kindle-ip>
+```
+
+Both use the same password. Note the capital `-P` for `sftp`.
 
 The server keeps running after you close the app. The buttons talk to a small
 HTTP bridge on the device (`nc` plus a shell handler) bound to
@@ -97,7 +98,7 @@ reports either "Already up to date" or "Updated to vX.Y.Z" based on the
 installed version before and after, not on the button having been tapped. It
 restarts the server if it was running and reloads the app page.
 
-The equivalent from `kterm`:
+The equivalent from `kterm` on the Kindle:
 
 ```text
 KPM=/var/local/kmc/bin/kpm
@@ -105,6 +106,25 @@ $KPM install dropbear-ssh
 ```
 
 This always hits the network, and does not need the repo re-added.
+
+## Uninstalling
+
+From `kterm` on the Kindle:
+
+```text
+/var/local/kmc/bin/kpm uninstall dropbear-ssh
+```
+
+That stops the server, removes the binaries, and unregisters the app. Two
+things are left in place deliberately:
+
+- **The Library launcher**, `documents/dropbear-ssh.sh`. Delete it over USB if
+  you want the icon gone. KPM runs the uninstall hooks during every upgrade
+  too, so removing it automatically would make the icon disappear after the
+  first tap.
+- **Your password and host keys**, under `/mnt/us/usbnetlite/etc`, so an
+  upgrade never invalidates a working setup. Delete `/mnt/us/usbnetlite` for a
+  clean slate.
 
 ## Password
 
@@ -145,14 +165,18 @@ the master-password `crypt()` call. Same root cause as a
 Fixed since `0.1.8`, which bundles a copy in `bin_11thgenplus` and points
 `LD_LIBRARY_PATH` at it. Report it if you still hit this on `0.1.8` or later.
 
-**The upstream `;...mrpi` installer does not work here.** On current
-jailbreaks that command is handled by `dispatch.sh`, which looks for a
-no-longer-bundled `/mnt/us/extensions/MRInstaller/bin/mrinstaller.sh` and just
-flashes "MRPI is not installed." Upstream's OTA installer also writes to
-rootfs and sets up USB-tethered networking, neither of which a KPM hook
-package does or needs.
+**Search-bar `;` commands do not work.** Neither upstream's `;...mrpi` nor
+`;kpm install ...` does anything useful on current jailbreaks. In the MRPI
+case, `dispatch.sh` looks for a no-longer-bundled
+`/mnt/us/extensions/MRInstaller/bin/mrinstaller.sh` and just flashes "MRPI is
+not installed." Use Option A or Option B instead; there is no search-bar path
+to installing this package.
 
-## About the repo URL
+**Why not upstream's own installer?** Beyond the above, its OTA installer
+writes to rootfs and sets up USB-tethered networking, neither of which a KPM
+hook package does or needs.
+
+## Package repository
 
 `https://nealing.net/manifest.json` is a Cloudflare Worker that proxies this
 author's KPM manifests and `.kpkg` files from GitHub. It is shorter to type,
